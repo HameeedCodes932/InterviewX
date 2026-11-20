@@ -9,6 +9,15 @@ import { api, type EvaluationReport } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { getMessages, t } from "@/lib/i18n";
 
+type RubricDimension = {
+  dimension_id?: string;
+  name?: string;
+  score?: number | null;
+  max_score?: number;
+  rationale?: string;
+  evidence?: Array<{ turn_index?: number; quote?: string }>;
+};
+
 export default function ReportDetailPage() {
   const { token } = useAuth();
   const params = useParams<{ id: string }>();
@@ -24,6 +33,9 @@ export default function ReportDetailPage() {
       .catch(() => setError(t(m, "reports.notFound")));
   }, [token, params.id, m]);
 
+  const dimensions =
+    (report?.rubric?.dimensions as RubricDimension[] | undefined) || [];
+
   return (
     <RequireAuth>
       <AppShell>
@@ -35,17 +47,53 @@ export default function ReportDetailPage() {
         </h1>
         {error ? <p className="mt-4 text-red-700">{error}</p> : null}
         {report ? (
-          <div className="mt-6 space-y-4 rounded-xl border border-ink/10 bg-white/55 p-6">
-            <p className="text-sm text-ink-muted">
-              {report.category_slug} · {new Date(report.created_at).toLocaleString()}
-            </p>
-            <p className="text-ink">
-              {report.summary || "Report shell — evaluation pipeline not connected yet."}
-            </p>
-            {report.rubric ? (
-              <pre className="overflow-auto rounded-lg bg-ink/5 p-4 text-xs text-ink">
-                {JSON.stringify(report.rubric, null, 2)}
-              </pre>
+          <div className="mt-6 space-y-6">
+            <div className="rounded-xl border border-ink/10 bg-white/55 p-6">
+              <p className="text-sm text-ink-muted">
+                {report.category_slug} · {new Date(report.created_at).toLocaleString()}
+                {report.overall_score != null
+                  ? ` · Overall ${report.overall_score}/5`
+                  : ""}
+              </p>
+              <p className="mt-3 text-ink">{report.summary}</p>
+              {report.qualitative ? (
+                <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+                  {report.qualitative}
+                </p>
+              ) : null}
+            </div>
+
+            {dimensions.length > 0 ? (
+              <div className="space-y-4">
+                {dimensions.map((dim) => (
+                  <article
+                    key={dim.dimension_id || dim.name}
+                    className="rounded-xl border border-ink/10 bg-white/55 p-5"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h2 className="font-display text-xl text-ink">{dim.name}</h2>
+                      <p className="text-sm text-teal">
+                        {dim.score == null
+                          ? "N/A"
+                          : `${dim.score}/${dim.max_score ?? 5}`}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-sm text-ink-muted">{dim.rationale}</p>
+                    {dim.evidence && dim.evidence.length > 0 ? (
+                      <ul className="mt-3 space-y-2 border-t border-ink/10 pt-3">
+                        {dim.evidence.map((ev, i) => (
+                          <li key={i} className="text-sm text-ink">
+                            <span className="text-ink-muted">
+                              Turn {ev.turn_index ?? "?"}:
+                            </span>{" "}
+                            “{ev.quote}”
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
             ) : null}
           </div>
         ) : null}

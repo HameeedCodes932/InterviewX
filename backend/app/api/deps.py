@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
@@ -41,3 +42,14 @@ def get_current_user(
             detail="User not found",
         )
     return user
+
+
+def require_agent_api_key(
+    x_agent_key: str | None = Header(default=None, alias="X-Agent-Key"),
+) -> None:
+    settings = get_settings()
+    if not x_agent_key or x_agent_key != settings.agent_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid agent API key",
+        )

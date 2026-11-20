@@ -1,18 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { RequireAuth } from "@/components/RequireAuth";
-import { api, type Dashboard } from "@/lib/api";
+import { api, ApiError, type Dashboard } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { getMessages, t } from "@/lib/i18n";
 
 export default function DashboardPage() {
   const { token } = useAuth();
+  const router = useRouter();
   const m = getMessages();
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -22,13 +25,39 @@ export default function DashboardPage() {
       .catch((err) => setError(err.message || "Failed to load dashboard"));
   }, [token]);
 
+  async function startInterview() {
+    if (!token || starting) return;
+    setStarting(true);
+    setError(null);
+    try {
+      const res = await api.startInterview(token, {
+        category_slug: "software-engineering",
+        interviewer_gender: data?.preferred_interviewer,
+        language: "en",
+        difficulty: "mid",
+      });
+      const q = new URLSearchParams({
+        token: res.token,
+        url: res.livekit_url,
+      });
+      router.push(`/interview/${res.session_id}?${q.toString()}`);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : t(m, "interview.startError"),
+      );
+      setStarting(false);
+    }
+  }
+
   return (
     <RequireAuth>
       <AppShell>
         {!data && !error ? (
           <p className="text-ink-muted">Loading dashboard…</p>
         ) : null}
-        {error ? <p className="text-red-700">{error}</p> : null}
+        {error ? <p className="mb-4 text-red-700">{error}</p> : null}
         {data ? (
           <div className="space-y-10">
             <section className="animate-rise">
@@ -77,10 +106,12 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         className="btn-primary mt-4"
-                        title="Voice interview agent lands in the next Phase 1 slice"
-                        disabled
+                        onClick={startInterview}
+                        disabled={starting}
                       >
-                        {t(m, "dashboard.startInterview")} (soon)
+                        {starting
+                          ? t(m, "interview.starting")
+                          : t(m, "dashboard.startInterview")}
                       </button>
                     ) : null}
                   </article>
@@ -134,6 +165,9 @@ export default function DashboardPage() {
                 </p>
                 <p className="mt-2 text-sm text-ink">
                   Interviews completed: {data.performance_overview.interviews_completed}
+                  {data.performance_overview.average_score != null
+                    ? ` · Avg ${data.performance_overview.average_score}/5`
+                    : ""}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3 text-sm">
                   <Link href="/profile" className="text-teal hover:underline">

@@ -32,7 +32,9 @@ class EvaluationReportOut(BaseModel):
     id: UUID
     session_id: UUID
     summary: str | None = None
+    qualitative: str | None = None
     rubric: dict | None = None
+    overall_score: float | None = None
     created_at: datetime
     category_slug: str | None = None
 

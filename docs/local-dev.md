@@ -1,39 +1,28 @@
 # Local development
 
-## Prerequisites
-
-- Node.js 20+
-- Python 3.11+
-- Docker (for PostgreSQL via `docker-compose`)
-
-## Quick start
+## Auth + dashboard only
 
 ```bash
-# 1. Environment
 cp .env.example .env
-
-# 2. Database
 docker compose up -d postgres
-
-# 3. Backend
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
+cd backend && python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# 4. Frontend (new terminal)
-cd apps/web
-npm install
-npm run dev
+uvicorn app.main:app --reload --port 8000
+# other terminal
+cd apps/web && npm install && npm run dev
 ```
 
-Open http://localhost:3000 — sign up, then land on the candidate dashboard.
+## Full Software Engineering voice interview
 
-API docs: http://localhost:8000/docs
+```bash
+docker compose up -d postgres livekit
+ollama pull llama3.2:3b
+# Install Piper + male/female voices (see agent/README.md)
 
-## Notes
+# terminals:
+# 1) backend uvicorn
+# 2) cd agent && source .venv/bin/activate && python -m interviewx_agent.main start
+# 3) apps/web npm run dev
+```
 
-- Password reset works without SMTP: the forgot-password API returns `reset_token` / `reset_url` for local testing (TODO: enable SMTP).
-- Voice agent, LiveKit, Ollama, Whisper, and Piper are **not** required for auth + dashboard.
-- Categories other than Software Engineering are Coming Soon shells.
+Recommended model: **llama3.2:3b**. Recommended Piper voices: **en_US-amy-medium** (female), **en_US-lessac-medium** (male) — licence-verify ONNX files.

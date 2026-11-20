@@ -85,5 +85,19 @@
     "title": "Settings",
     "subtitle": "Account preferences. More options arrive with later phases.",
     "languageNote": "Interface language is English for v0. The product is structured for additional locales later."
+  },
+  "interview": {
+    "roomTitle": "Software Engineering interview",
+    "avatarPlaceholder": "Avatar soon",
+    "connected": "Connected",
+    "connecting": "Connecting…",
+    "waiting": "Your interviewer will greet you shortly.",
+    "micOn": "on",
+    "micOff": "off",
+    "mute": "Mute mic",
+    "unmute": "Unmute mic",
+    "end": "End interview",
+    "starting": "Starting…",
+    "startError": "Could not start interview. Is LiveKit and the agent running?"
   }
 }

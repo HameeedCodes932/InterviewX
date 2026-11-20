@@ -1,5 +1,11 @@
+from app.models.interview import (
+    Category,
+    EvaluationReport,
+    InterviewSession,
+    TranscriptTurn,
+    UsageEvent,
+)
 from app.models.user import PasswordResetToken, Profile, User
-from app.models.interview import Category, EvaluationReport, InterviewSession
 
 __all__ = [
     "User",
@@ -7,5 +13,7 @@ __all__ = [
     "PasswordResetToken",
     "Category",
     "InterviewSession",
+    "TranscriptTurn",
+    "UsageEvent",
     "EvaluationReport",
 ]
