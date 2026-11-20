@@ -88,7 +88,8 @@
   },
   "interview": {
     "roomTitle": "Software Engineering interview",
-    "avatarPlaceholder": "Avatar soon",
+    "avatarPlaceholder": "Interviewer",
+    "avatarLoading": "Loading interviewer…",
     "connected": "Connected",
     "connecting": "Connecting…",
     "waiting": "Your interviewer will greet you shortly.",

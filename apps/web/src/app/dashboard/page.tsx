@@ -39,6 +39,7 @@ export default function DashboardPage() {
       const q = new URLSearchParams({
         token: res.token,
         url: res.livekit_url,
+        gender: res.interviewer_gender || data?.preferred_interviewer || "female",
       });
       router.push(`/interview/${res.session_id}?${q.toString()}`);
     } catch (err) {
