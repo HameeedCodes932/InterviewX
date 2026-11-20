@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #0c1b24;
+  --ink-muted: #5a6b75;
+  --mist: #f3efe6;
+  --mist-deep: #e4ddd0;
+  --brass: #a67c52;
+  --teal: #1f4e5f;
+  --teal-soft: #2f6f7e;
+  --surface: rgba(243, 239, 230, 0.88);
+  --background: #f3efe6;
+  --foreground: #0c1b24;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.atmosphere-layer {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(47, 111, 126, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 10%, rgba(166, 124, 82, 0.18), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(12, 27, 36, 0.08), transparent 55%),
+    linear-gradient(165deg, #f7f3ea 0%, #ebe4d6 45%, #dfe8e6 100%);
+  animation: atmosphere-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes atmosphere-drift {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.04) translate3d(-1%, 1%, 0);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.8s ease-out 0.12s both;
+}
+
+.animate-rise-late {
+  animation: rise 0.9s ease-out 0.24s both;
+}
+
+.shadow-soft {
+  box-shadow: 0 18px 50px rgba(12, 27, 36, 0.08);
+}
+
+.field {
+  @apply w-full rounded-lg border border-ink/15 bg-white/70 px-3 py-2.5 text-ink outline-none transition placeholder:text-ink-muted/70 focus:border-teal focus:ring-2 focus:ring-teal/20;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-mist transition hover:bg-teal disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-lg border border-ink/20 bg-transparent px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-ink/5;
+}
+
+.path-card {
+  @apply relative overflow-hidden rounded-xl border border-ink/10 bg-white/55 p-5 transition;
+}
+
+.path-card-available {
+  @apply hover:-translate-y-0.5 hover:border-teal/40;
+}
+
+.path-card-available:hover {
+  box-shadow: 0 18px 50px rgba(12, 27, 36, 0.08);
+}
+
+.path-card-soon {
+  @apply opacity-80;
+}

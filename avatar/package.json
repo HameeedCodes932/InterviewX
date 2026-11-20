@@ -1,0 +1,10 @@
+{
+  "name": "@interviewx/avatar",
+  "version": "0.0.1",
+  "private": true,
+  "description": "InterviewX R3F avatar runtime stub",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "echo 'avatar stub — no build yet'"
+  }
+}
