@@ -1,0 +1,89 @@
+{
+  "brand": {
+    "name": "InterviewX",
+    "tagline": "Practise with a virtual human interviewer who listens, adapts, and evaluates."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "history": "History",
+    "reports": "Reports",
+    "settings": "Settings",
+    "logout": "Log out",
+    "login": "Log in",
+    "signup": "Create account"
+  },
+  "landing": {
+    "headline": "Interview readiness, practised with presence.",
+    "subhead": "Sign in to choose your interview path and rehearse with a professional virtual interviewer.",
+    "ctaPrimary": "Create account",
+    "ctaSecondary": "Log in"
+  },
+  "auth": {
+    "signupTitle": "Create your InterviewX account",
+    "loginTitle": "Welcome back",
+    "forgotTitle": "Reset your password",
+    "resetTitle": "Choose a new password",
+    "fullName": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New password",
+    "submitSignup": "Create account",
+    "submitLogin": "Log in",
+    "submitForgot": "Send reset link",
+    "submitReset": "Update password",
+    "haveAccount": "Already have an account?",
+    "needAccount": "New here?",
+    "forgotLink": "Forgot password?",
+    "backToLogin": "Back to login"
+  },
+  "dashboard": {
+    "welcome": "Welcome back, {name}",
+    "welcomeSub": "Choose your interview path and continue building confidence.",
+    "pathTitle": "Choose Your Interview Path",
+    "pathSub": "Software Engineering is available now. Other paths open soon.",
+    "available": "Available",
+    "comingSoon": "Coming Soon",
+    "startInterview": "Start interview",
+    "selectedInterviewer": "Selected interviewer",
+    "noInterviewer": "Not set — pick a preference in Profile",
+    "recentInterviews": "Recent interviews",
+    "noRecent": "No interviews yet. Start with Software Engineering when you are ready.",
+    "performance": "Performance overview",
+    "performanceEmpty": "Complete your first interview to unlock scored insights.",
+    "quickLinks": "Account"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Tell InterviewX how you want to practise.",
+    "save": "Save changes",
+    "saved": "Profile updated",
+    "headline": "Headline",
+    "bio": "Bio",
+    "goal": "Interview goal",
+    "language": "Preferred language",
+    "interviewer": "Preferred interviewer",
+    "location": "Location",
+    "targetRole": "Target role",
+    "male": "Male interviewer",
+    "female": "Female interviewer"
+  },
+  "history": {
+    "title": "Interview history",
+    "subtitle": "Past sessions appear here after you complete interviews.",
+    "empty": "No interview history yet.",
+    "viewReport": "View report"
+  },
+  "reports": {
+    "title": "Evaluation reports",
+    "subtitle": "Scored rubrics and qualitative feedback will appear after sessions.",
+    "empty": "No evaluation reports yet.",
+    "detailTitle": "Evaluation report",
+    "notFound": "Report not found."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Account preferences. More options arrive with later phases.",
+    "languageNote": "Interface language is English for v0. The product is structured for additional locales later."
+  }
+}

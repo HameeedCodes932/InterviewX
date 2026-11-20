@@ -1,0 +1,10 @@
+[project]
+name = "interviewx-agent"
+version = "0.0.1"
+description = "InterviewX LiveKit agent runtime (stub)"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# Future: livekit-agents, faster-whisper, ollama client, piper bindings
+runtime = []
