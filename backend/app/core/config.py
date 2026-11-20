@@ -26,6 +26,20 @@ class Settings(BaseSettings):
     smtp_from: str = "noreply@interviewx.local"
     password_reset_base_url: str = "http://localhost:3000/reset-password"
 
+    # Self-hosted LiveKit (dev defaults match livekit-server --dev)
+    livekit_url: str = "ws://localhost:7880"
+    livekit_public_url: str = "ws://localhost:7880"
+    livekit_api_key: str = "devkey"
+    livekit_api_secret: str = "secret"
+    livekit_agent_name: str = "interviewx-interviewer"
+
+    # Shared secret for agent → API calls
+    agent_api_key: str = "dev-agent-api-key-change-me"
+
+    # OSS AI (used by evaluation service; agent has its own env)
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.2:3b"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

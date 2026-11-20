@@ -93,9 +93,43 @@ export type EvaluationReport = {
   id: string;
   session_id: string;
   summary: string | null;
+  qualitative: string | null;
   rubric: Record<string, unknown> | null;
+  overall_score: number | null;
   created_at: string;
   category_slug: string | null;
+};
+
+export type StartInterviewResponse = {
+  session_id: string;
+  room_name: string;
+  livekit_url: string;
+  token: string;
+  status: string;
+  category_slug: string;
+  interviewer_gender: string | null;
+  language: string;
+};
+
+export type SessionDetail = {
+  id: string;
+  category_slug: string;
+  status: string;
+  interviewer_gender: string | null;
+  language: string;
+  difficulty: string;
+  room_name: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+  transcript: Array<{
+    id: string;
+    role: string;
+    text: string;
+    turn_index: number;
+    created_at: string;
+  }>;
+  report_id: string | null;
 };
 
 export const api = {
@@ -136,6 +170,28 @@ export const api = {
     ),
   interviews: (token: string) =>
     request<InterviewSession[]>("/api/interviews", {}, token),
+  startInterview: (
+    token: string,
+    body: {
+      category_slug?: string;
+      interviewer_gender?: string | null;
+      language?: string;
+      difficulty?: string;
+    },
+  ) =>
+    request<StartInterviewResponse>(
+      "/api/interviews/start",
+      { method: "POST", body: JSON.stringify(body) },
+      token,
+    ),
+  getInterview: (token: string, sessionId: string) =>
+    request<SessionDetail>(`/api/interviews/${sessionId}`, {}, token),
+  endInterview: (token: string, sessionId: string, reason = "candidate_ended") =>
+    request<SessionDetail>(
+      `/api/interviews/${sessionId}/end`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+      token,
+    ),
   reports: (token: string) =>
     request<EvaluationReport[]>("/api/reports", {}, token),
   report: (token: string, id: string) =>

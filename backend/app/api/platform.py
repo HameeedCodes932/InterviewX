@@ -60,6 +60,20 @@ def dashboard(
     }
 
     preferred = user.profile.preferred_interviewer if user.profile else None
+    all_sessions = db.scalars(
+        select(InterviewSession).where(InterviewSession.user_id == user.id)
+    ).all()
+    completed = [
+        s for s in all_sessions if s.status in ("completed", "evaluated")
+    ]
+    scored = [
+        r.overall_score
+        for r in db.scalars(
+            select(EvaluationReport).where(EvaluationReport.user_id == user.id)
+        ).all()
+        if r.overall_score is not None
+    ]
+    avg = round(sum(scored) / len(scored), 2) if scored else None
     return DashboardOut(
         full_name=user.full_name,
         email=user.email,
@@ -67,9 +81,13 @@ def dashboard(
         categories=[CategoryOut.model_validate(c) for c in categories],
         recent_sessions=[_session_out(s, s.id in report_ids) for s in sessions],
         performance_overview={
-            "interviews_completed": len(sessions),
-            "average_score": None,
-            "message": "Complete your first Software Engineering interview to unlock insights.",
+            "interviews_completed": len(completed),
+            "average_score": avg,
+            "message": (
+                "Keep practising — review your latest evaluation report for evidence-linked feedback."
+                if completed
+                else "Complete your first Software Engineering interview to unlock insights."
+            ),
         },
     )
 
@@ -107,7 +125,9 @@ def get_report(
         id=report.id,
         session_id=report.session_id,
         summary=report.summary,
+        qualitative=report.qualitative,
         rubric=report.rubric,
+        overall_score=report.overall_score,
         created_at=report.created_at,
         category_slug=session.category_slug if session else None,
     )
@@ -131,7 +151,9 @@ def list_reports(
                 id=report.id,
                 session_id=report.session_id,
                 summary=report.summary,
+                qualitative=report.qualitative,
                 rubric=report.rubric,
+                overall_score=report.overall_score,
                 created_at=report.created_at,
                 category_slug=session.category_slug if session else None,
             )

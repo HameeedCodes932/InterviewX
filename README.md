@@ -2,21 +2,29 @@
 
 AI-powered virtual human interview simulation platform.
 
-Phase 1 scaffold: **professional auth + candidate dashboard** (voice agent and 3D avatar are stubs).
+Phase 1: **professional auth + candidate dashboard + Software Engineering voice interviewer** (OSS stack). Avatar package remains a stub.
 
 ## Monorepo layout
 
 ```
-apps/web/          Next.js platform UI
-backend/           FastAPI modular monolith (auth, profile, dashboard APIs)
-agent/             LiveKit agent runtime (stub)
+apps/web/          Next.js platform UI + interview room
+backend/           FastAPI (auth, sessions, transcripts, evaluation, usage)
+agent/             LiveKit Agents runtime (Whisper → Ollama → Piper)
 avatar/            R3F avatar runtime (stub)
 packages/contracts Shared AvatarAction / observation types
 docs/              Engineering notes
-docker-compose.yml PostgreSQL for local development
+docker-compose.yml PostgreSQL + self-hosted LiveKit
 ```
 
-## How to run (auth + dashboard)
+## How to run (full SE voice interview)
+
+### Prerequisites
+
+- Docker (Postgres + LiveKit)
+- Node.js 20+
+- Python 3.11+
+- [Ollama](https://ollama.com) with a local model
+- [Piper](https://github.com/rhasspy/piper) CLI + male/female voice ONNX files
 
 ### 1. Environment
 
@@ -24,25 +32,53 @@ docker-compose.yml PostgreSQL for local development
 cp .env.example .env
 ```
 
-### 2. PostgreSQL
+### 2. Infrastructure
 
 ```bash
-docker compose up -d postgres
+docker compose up -d postgres livekit
 ```
 
-### 3. Backend
+LiveKit dev defaults: `ws://localhost:7880`, API key `devkey`, secret `secret`.
+
+### 3. Ollama model
+
+```bash
+ollama pull llama3.2:3b
+# optional: export OLLAMA_MODEL=llama3.2:3b
+```
+
+**Licence:** verify the model weights for your use case before commercial deployment.
+
+### 4. Piper voices (distinct male + female)
+
+```bash
+# Install piper binary, then download voices (licence-verify each ONNX):
+mkdir -p ~/.local/share/piper
+# Place en_US-amy-medium.onnx (+ .json) and en_US-lessac-medium.onnx (+ .json)
+# Defaults: PIPER_VOICE_FEMALE=en_US-amy-medium  PIPER_VOICE_MALE=en_US-lessac-medium
+```
+
+See `agent/README.md` for licence notes.
+
+### 5. Backend
 
 ```bash
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Health: http://localhost:8000/health · Docs: http://localhost:8000/docs
+### 6. Agent worker
 
-### 4. Frontend
+```bash
+cd agent
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python -m interviewx_agent.main start
+```
+
+### 7. Frontend
 
 ```bash
 cd apps/web
@@ -50,24 +86,22 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 → create an account → land on the candidate dashboard.
+Open http://localhost:3000 → sign up → **Start interview** on Software Engineering → allow mic → complete session → evaluation report.
 
-## What works now
+## What works
 
-- Signup, login, logout
-- Forgot / reset password (SMTP stubbed — reset token returned in API when `SMTP_ENABLED=false`)
-- Hashed passwords (bcrypt) + JWT sessions
-- Candidate dashboard with category grid (Software Engineering **Available**; others **Coming Soon**)
-- Profile management
-- Interview history + evaluation report shells (empty states)
+- Auth (signup / login / logout / forgot-password)
+- Dashboard with category paths
+- LiveKit room join, mic, end interview
+- Adaptive SE interviewer (greeting, follow-ups, session memory, interruption handling)
+- Transcript persistence + usage metrics (even when $ ≈ 0)
+- Scored SE rubric + qualitative feedback with evidence quotes
 
-## Stubbed / not in this slice
+## Still stubbed
 
-- LiveKit voice interview agent (`agent/`)
-- Ollama / Whisper / Piper adapters
-- 3D avatars (`avatar/`)
-- Starting an interview from the dashboard (button disabled until voice slice)
-- Real email delivery for password reset
+- 3D avatar (`avatar/`) — placeholder circle in the room
+- Categories other than Software Engineering
+- Real SMTP for password reset
 
 ## Stack (v0, free/OSS)
 
@@ -75,8 +109,8 @@ Open http://localhost:3000 → create an account → land on the candidate dashb
 | ----- | ------ |
 | Frontend | Next.js |
 | Backend | FastAPI |
+| Realtime | Self-hosted LiveKit |
+| LLM | Ollama |
+| STT | faster-whisper |
+| TTS | Piper |
 | DB | PostgreSQL |
-| LLM / STT / TTS (later) | Ollama / Whisper / Piper |
-| Realtime (later) | Self-hosted LiveKit |
-
-Product decisions: see Project store `docs/DECISIONS.md`.

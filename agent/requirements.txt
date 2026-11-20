@@ -1,0 +1,13 @@
+livekit==0.22.0
+livekit-agents==0.12.20
+livekit-plugins-silero==0.7.5
+httpx==0.28.1
+numpy==2.2.1
+faster-whisper==1.1.1
+soundfile==0.13.1
+python-dotenv==1.0.1
+aiohttp==3.11.11
+onnxruntime==1.32.0
+# piper-tts 1.8+ ships wheels for modern Python; if pip fails resolving
+# piper-phonemize, install with: pip install piper-tts --no-deps
+piper-tts==1.8.0

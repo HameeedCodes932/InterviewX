@@ -17,13 +17,26 @@ services:
       timeout: 5s
       retries: 10
 
-  # Phase 1+ (optional local services — not required for auth/dashboard):
+  livekit:
+    image: livekit/livekit-server:v1.8.4
+    container_name: interviewx-livekit
+    restart: unless-stopped
+    command: --dev --bind 0.0.0.0 --node-ip=127.0.0.1
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    # Dev keys: API key=devkey secret=secret
+
+  # Optional: run Ollama in Docker if not installed on the host.
   # ollama:
   #   image: ollama/ollama:latest
-  #   ports: ["11434:11434"]
-  # livekit:
-  #   image: livekit/livekit-server:latest
-  #   ...
+  #   container_name: interviewx-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - interviewx_ollama:/root/.ollama
 
 volumes:
   interviewx_pgdata:
+  # interviewx_ollama:

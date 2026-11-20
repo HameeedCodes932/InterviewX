@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, platform, profile
+from app.api import auth, interviews, platform, profile
 from app.core.config import get_settings
 from app.core.database import Base, SessionLocal, engine
+from app.core.schema_migrate import ensure_columns
 from app.seed import seed_categories
 
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +17,7 @@ logger = logging.getLogger("interviewx")
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_columns(engine)
     db = SessionLocal()
     try:
         seed_categories(db)
@@ -30,7 +32,7 @@ settings = get_settings()
 app = FastAPI(
     title="InterviewX API",
     description="Professional interview simulation platform API",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -45,6 +47,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
 app.include_router(platform.router, prefix="/api")
+app.include_router(interviews.router, prefix="/api")
 
 
 @app.get("/health")
