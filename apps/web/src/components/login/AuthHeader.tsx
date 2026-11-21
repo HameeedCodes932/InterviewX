@@ -27,7 +27,16 @@ function LogoMark() {
   );
 }
 
-export function AuthHeader() {
+type Props = {
+  /** Defaults keep the approved login header unchanged. */
+  actionHref?: string;
+  actionLabel?: string;
+};
+
+export function AuthHeader({
+  actionHref = "/signup",
+  actionLabel = "Create account",
+}: Props) {
   return (
     <header className="flex items-center justify-between gap-2 min-[375px]:gap-4">
       <Link
@@ -41,10 +50,10 @@ export function AuthHeader() {
       </Link>
 
       <Link
-        href="/signup"
+        href={actionHref}
         className="ix-btn-secondary shrink-0 px-3 py-1.5 text-xs min-[375px]:px-4 min-[375px]:py-2 min-[375px]:text-sm sm:px-5"
       >
-        Create account
+        {actionLabel}
       </Link>
     </header>
   );
