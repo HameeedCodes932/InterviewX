@@ -108,4 +108,58 @@
       padding: 1.5rem;
     }
   }
+
+  .ix-dash-welcome {
+    border-radius: 1.35rem;
+    border: 1px solid #d9d6cf;
+    background: linear-gradient(145deg, #f4f2ed 0%, #ebe8e2 55%, #e3e0d9 100%);
+    padding: 1.5rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.7) inset,
+      0 22px 50px -34px rgba(23, 25, 31, 0.35);
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-welcome {
+      padding: 1.85rem 2rem;
+    }
+  }
+
+  .ix-dash-panel {
+    border-radius: 1.35rem;
+    border: 1px solid #d9d6cf;
+    background: #f3f2ee;
+    padding: 1.35rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.65) inset,
+      0 18px 44px -32px rgba(23, 25, 31, 0.32);
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-panel {
+      padding: 1.6rem 1.75rem;
+    }
+  }
+
+  .ix-dash-card {
+    border-radius: 1.25rem;
+    border: 1px solid #d9d6cf;
+    background: #f7f6f2;
+    padding: 1.25rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.7) inset,
+      0 16px 36px -28px rgba(23, 25, 31, 0.3);
+  }
+
+  .ix-dash-card-available {
+    border-color: rgba(86, 87, 201, 0.28);
+    background: linear-gradient(165deg, #f8f7f4 0%, #f1f0f8 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.75) inset,
+      0 20px 44px -28px rgba(86, 87, 201, 0.28);
+  }
+
+  .ix-dash-card-soon {
+    opacity: 0.92;
+  }
 }
