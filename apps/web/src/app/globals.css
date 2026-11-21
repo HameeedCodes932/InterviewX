@@ -190,4 +190,77 @@
       @apply px-4 py-2 text-sm;
     }
   }
+
+  .ix-setup-panel {
+    border-radius: 1.25rem;
+    border: 1px solid #bdb8ae;
+    background: #f8f6f1;
+    padding: 1.15rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.85) inset,
+      0 16px 36px -24px rgba(23, 25, 31, 0.35);
+  }
+
+  @media (min-width: 640px) {
+    .ix-setup-panel {
+      padding: 1.35rem 1.5rem;
+    }
+  }
+
+  .ix-setup-option {
+    width: 100%;
+    border-radius: 0.9rem;
+    border: 1px solid #c4bfb5;
+    background: #ffffff;
+    padding: 0.75rem 0.85rem;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .ix-setup-option:hover {
+    border-color: #a8a297;
+  }
+
+  .ix-setup-option-selected {
+    border-color: #4f51b8;
+    background: linear-gradient(165deg, #ffffff 0%, #eef0fb 100%);
+    box-shadow: 0 0 0 1px rgba(79, 81, 184, 0.2);
+  }
+
+  .ix-setup-summary {
+    border-radius: 1.25rem;
+    border: 1.5px solid rgba(79, 81, 184, 0.35);
+    background: linear-gradient(165deg, #ffffff 0%, #eceefb 100%);
+    padding: 1.2rem 1.25rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 18px 40px -24px rgba(79, 81, 184, 0.35);
+  }
+
+  .ix-room-stage,
+  .ix-room-chat {
+    border-radius: 1.25rem;
+    border: 1px solid #bdb8ae;
+    background: #f7f5f0;
+    padding: 0.85rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.85) inset,
+      0 18px 40px -26px rgba(23, 25, 31, 0.4);
+  }
+
+  @media (min-width: 640px) {
+    .ix-room-stage,
+    .ix-room-chat {
+      padding: 1.1rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .ix-room-chat {
+      min-height: 0;
+      max-height: calc(100dvh - 9rem);
+    }
+  }
 }

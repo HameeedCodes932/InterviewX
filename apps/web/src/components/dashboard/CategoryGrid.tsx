@@ -1,14 +1,7 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
 import { INTERVIEW_CATEGORIES } from "./categories";
 
-const SETUP_NOTICE =
-  "Interview setup is the next development stage — this category is ready to select, but the practice room is not wired yet.";
-
 export function CategoryGrid() {
-  const [notice, setNotice] = useState<string | null>(null);
-
   return (
     <section aria-labelledby="categories-heading">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -28,15 +21,6 @@ export function CategoryGrid() {
           as InterviewX expands.
         </p>
       </div>
-
-      {notice ? (
-        <p
-          className="mt-4 rounded-ix-sm border border-ix-indigo/30 bg-[#f7f6fb] px-3.5 py-3 text-sm leading-relaxed text-ix-charcoal/85"
-          role="status"
-        >
-          {notice}
-        </p>
-      ) : null}
 
       {/* Mobile: 2 columns × 3 rows; tablet 2; desktop 3 */}
       <div className="mt-5 grid grid-cols-2 gap-2.5 min-[375px]:gap-3 sm:gap-4 xl:grid-cols-3">
@@ -81,13 +65,12 @@ export function CategoryGrid() {
 
               <div className="mt-3.5 sm:mt-5">
                 {available ? (
-                  <button
-                    type="button"
+                  <Link
+                    href="/interview/setup"
                     className="ix-btn-primary !py-2.5 text-[13px] sm:!py-[0.9rem] sm:text-[15px]"
-                    onClick={() => setNotice(SETUP_NOTICE)}
                   >
                     Begin practice
-                  </button>
+                  </Link>
                 ) : (
                   <button
                     type="button"
