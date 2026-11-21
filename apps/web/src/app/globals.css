@@ -238,4 +238,29 @@
       0 1px 0 rgba(255, 255, 255, 0.9) inset,
       0 18px 40px -24px rgba(79, 81, 184, 0.35);
   }
+
+  .ix-room-stage,
+  .ix-room-chat {
+    border-radius: 1.25rem;
+    border: 1px solid #bdb8ae;
+    background: #f7f5f0;
+    padding: 0.85rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.85) inset,
+      0 18px 40px -26px rgba(23, 25, 31, 0.4);
+  }
+
+  @media (min-width: 640px) {
+    .ix-room-stage,
+    .ix-room-chat {
+      padding: 1.1rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .ix-room-chat {
+      min-height: 0;
+      max-height: calc(100dvh - 9rem);
+    }
+  }
 }

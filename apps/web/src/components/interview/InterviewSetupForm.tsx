@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState, type ReactNode } from "react";
+import { writeSessionConfig } from "./sessionConfig";
 import {
   DEFAULT_SETUP,
   DIFFICULTIES,
@@ -15,8 +17,6 @@ import {
   type TargetRole,
 } from "./setupOptions";
 
-const ENGINE_NOTICE =
-  "The interview experience is being prepared — the AI interview engine will be connected in a later stage.";
 
 function OptionButton({
   selected,
@@ -68,6 +68,7 @@ function OptionButton({
 }
 
 export function InterviewSetupForm() {
+  const router = useRouter();
   const [role, setRole] = useState<TargetRole>(DEFAULT_SETUP.role);
   const [experience, setExperience] = useState<ExperienceLevelId>(
     DEFAULT_SETUP.experience,
@@ -80,7 +81,7 @@ export function InterviewSetupForm() {
     DEFAULT_SETUP.duration,
   );
   const [focusError, setFocusError] = useState<string | null>(null);
-  const [formNotice, setFormNotice] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const experienceLabel = useMemo(
     () => EXPERIENCE_LEVELS.find((item) => item.id === experience)?.label ?? experience,
@@ -96,7 +97,6 @@ export function InterviewSetupForm() {
   );
 
   function toggleFocus(focus: InterviewFocus) {
-    setFormNotice(null);
     setFocuses((current) => {
       const next = current.includes(focus)
         ? current.filter((item) => item !== focus)
@@ -108,7 +108,6 @@ export function InterviewSetupForm() {
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFormNotice(null);
 
     if (focuses.length === 0) {
       setFocusError("Select at least one interview focus.");
@@ -116,7 +115,16 @@ export function InterviewSetupForm() {
     }
 
     setFocusError(null);
-    setFormNotice(ENGINE_NOTICE);
+    setSubmitting(true);
+    writeSessionConfig({
+      category: "Software Engineering",
+      role,
+      experience,
+      focuses,
+      difficulty,
+      duration,
+    });
+    router.push("/interview/room");
   }
 
   const summary = (
@@ -186,10 +194,7 @@ export function InterviewSetupForm() {
                 <OptionButton
                   key={item}
                   selected={role === item}
-                  onClick={() => {
-                    setRole(item);
-                    setFormNotice(null);
-                  }}
+                  onClick={() => setRole(item)}
                 >
                   <span className="text-sm font-medium text-ix-graphite">{item}</span>
                 </OptionButton>
@@ -212,10 +217,7 @@ export function InterviewSetupForm() {
                 <OptionButton
                   key={item.id}
                   selected={experience === item.id}
-                  onClick={() => {
-                    setExperience(item.id);
-                    setFormNotice(null);
-                  }}
+                  onClick={() => setExperience(item.id)}
                 >
                   <span className="block text-sm font-medium text-ix-graphite">
                     {item.label}
@@ -272,10 +274,7 @@ export function InterviewSetupForm() {
                 <OptionButton
                   key={item.id}
                   selected={difficulty === item.id}
-                  onClick={() => {
-                    setDifficulty(item.id);
-                    setFormNotice(null);
-                  }}
+                  onClick={() => setDifficulty(item.id)}
                 >
                   <span className="block text-sm font-medium text-ix-graphite">
                     {item.label}
@@ -303,10 +302,7 @@ export function InterviewSetupForm() {
                 <OptionButton
                   key={item.id}
                   selected={duration === item.id}
-                  onClick={() => {
-                    setDuration(item.id);
-                    setFormNotice(null);
-                  }}
+                  onClick={() => setDuration(item.id)}
                   className="min-h-[3rem]"
                 >
                   <span className="text-sm font-medium text-ix-graphite">
@@ -323,25 +319,17 @@ export function InterviewSetupForm() {
 
       <div className="lg:hidden">{summary}</div>
 
-      {formNotice ? (
-        <p
-          className="rounded-ix-sm border border-ix-indigo/30 bg-[#f7f6fb] px-3.5 py-3 text-sm leading-relaxed text-ix-charcoal/85"
-          role="status"
-        >
-          {formNotice}
-        </p>
-      ) : null}
-
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-ix-charcoal/55">
-          Review your summary, then start when you are ready. The AI interview
-          room is not connected yet.
+          Review your summary, then enter the interview room. The AI interview
+          engine is not connected yet — conversation is simulated locally.
         </p>
         <button
           type="submit"
           className="ix-btn-primary sm:w-auto sm:min-w-[12rem] sm:px-8"
+          disabled={submitting}
         >
-          Start Interview
+          {submitting ? "Opening room…" : "Start Interview"}
         </button>
       </div>
     </form>
