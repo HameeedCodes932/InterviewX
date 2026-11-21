@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ix-offwhite: #f5f5f2;
+  --ix-softgrey: #e7e7e4;
+  --ix-charcoal: #25262b;
+  --ix-graphite: #17191f;
+  --ix-silver: #b8bac2;
+  --ix-indigo: #5657c9;
+  --ix-blue: #3979e8;
+  --ix-mist: #fafaf7;
+}
+
+@layer base {
+  html {
+    @apply h-full antialiased;
+  }
+
+  body {
+    @apply min-h-full bg-ix-offwhite font-sans text-ix-charcoal;
+    background-color: #f5f5f2;
+    background-image:
+      radial-gradient(ellipse 90% 60% at 8% 0%, rgba(245, 245, 242, 1), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 100% 0%, rgba(231, 231, 228, 0.9), transparent 50%),
+      radial-gradient(ellipse 55% 40% at 70% 100%, rgba(86, 87, 201, 0.04), transparent 55%),
+      linear-gradient(180deg, #f7f6f3 0%, #f5f5f2 55%, #efeee9 100%);
+  }
+
+  ::selection {
+    background: rgba(86, 87, 201, 0.16);
+  }
+}
+
+@layer components {
+  .ix-field {
+    @apply w-full rounded-[0.85rem] border border-[#d8d6d0] bg-[#fffefb] px-3.5 py-[0.85rem] text-[15px] text-ix-charcoal outline-none transition duration-200 placeholder:text-ix-silver;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .ix-field:hover {
+    @apply border-[#c9c6bf];
+  }
+
+  .ix-field:focus {
+    @apply border-ix-blue/45;
+    box-shadow: 0 0 0 3px rgba(57, 121, 232, 0.22);
+  }
+
+  .ix-field[aria-invalid="true"] {
+    @apply border-red-700/40;
+  }
+
+  .ix-field[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.16);
+  }
+
+  .ix-btn-primary {
+    @apply inline-flex w-full items-center justify-center rounded-full bg-ix-graphite px-5 py-[0.9rem] text-[15px] font-medium tracking-wide text-white transition duration-200;
+    box-shadow: 0 10px 28px -16px rgba(23, 25, 31, 0.65);
+  }
+
+  .ix-btn-primary:hover:not(:disabled) {
+    @apply bg-ix-charcoal;
+  }
+
+  .ix-btn-primary:active:not(:disabled) {
+    transform: translateY(0.5px);
+  }
+
+  .ix-btn-primary:disabled {
+    @apply cursor-not-allowed opacity-55;
+    box-shadow: none;
+  }
+
+  .ix-btn-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-[#d5d3cd] bg-[#ecebe7] px-4 py-2 text-sm font-medium text-ix-charcoal transition duration-200 hover:bg-[#e3e2dd];
+  }
+
+  .ix-link {
+    @apply text-ix-indigo underline-offset-4 transition hover:text-ix-blue hover:underline;
+  }
+
+  .ix-login-card {
+    border-radius: 1.35rem;
+    border: 1px solid #d9d6cf;
+    background: #f3f2ee;
+    padding: 1.5rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.7) inset,
+      0 22px 50px -30px rgba(23, 25, 31, 0.4);
+  }
+
+  @media (min-width: 640px) {
+    .ix-login-card {
+      padding: 1.75rem;
+    }
+  }
+
+  /* Slightly denser surface for the taller signup form — login card unchanged. */
+  .ix-login-card.ix-signup-card {
+    padding: 1.35rem;
+  }
+
+  @media (min-width: 640px) {
+    .ix-login-card.ix-signup-card {
+      padding: 1.5rem;
+    }
+  }
+
+  /* Dashboard-only shell — keeps login/signup page atmosphere unchanged. */
+  .ix-dashboard-shell {
+    background-color: #d9d6cf;
+    background-image:
+      radial-gradient(ellipse 85% 55% at 6% 0%, rgba(245, 243, 238, 0.9), transparent 55%),
+      radial-gradient(ellipse 60% 45% at 100% 8%, rgba(86, 87, 201, 0.11), transparent 50%),
+      linear-gradient(180deg, #e2dfd7 0%, #d9d6cf 55%, #d1cec6 100%);
+  }
+
+  .ix-dash-welcome {
+    border-radius: 1.35rem;
+    border: 1px solid #bdb8ae;
+    background: linear-gradient(145deg, #ffffff 0%, #f3f0ea 52%, #e8e4db 100%);
+    padding: 1.5rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 24px 50px -26px rgba(23, 25, 31, 0.48);
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-welcome {
+      padding: 1.85rem 2rem;
+    }
+  }
+
+  .ix-dash-panel {
+    border-radius: 1.35rem;
+    border: 1px solid #bdb8ae;
+    background: #f4f2ec;
+    padding: 1.35rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.85) inset,
+      0 20px 46px -26px rgba(23, 25, 31, 0.42);
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-panel {
+      padding: 1.6rem 1.75rem;
+    }
+  }
+
+  .ix-dash-card {
+    border-radius: 1.15rem;
+    border: 1px solid #b7b2a7;
+    background: #ffffff;
+    padding: 0.85rem;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 16px 34px -20px rgba(23, 25, 31, 0.42);
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-card {
+      border-radius: 1.25rem;
+      padding: 1.25rem;
+    }
+  }
+
+  .ix-dash-card-available {
+    border-color: #4f51b8;
+    border-width: 1.5px;
+    background: linear-gradient(165deg, #ffffff 0%, #eceefb 55%, #e0e3f7 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 20px 42px -18px rgba(79, 81, 184, 0.48);
+  }
+
+  .ix-dash-card-soon {
+    background: #f8f6f1;
+    border-color: #aea99d;
+  }
+
+  .ix-dash-btn-soon {
+    @apply inline-flex w-full cursor-not-allowed items-center justify-center rounded-full border border-[#a8a297] bg-[#ddd8ce] px-3 py-2 text-[13px] font-medium text-[#3f3d39];
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-btn-soon {
+      @apply px-4 py-2 text-sm;
+    }
+  }
+}

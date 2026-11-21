@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 520" fill="none" role="img" aria-labelledby="ixSceneTitle">
+  <title id="ixSceneTitle">Professional seated interviewer at a desk</title>
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F3F1EC"/>
+      <stop offset="100%" stop-color="#E4E2DC"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D9D5CD"/>
+      <stop offset="100%" stop-color="#C9C4BA"/>
+    </linearGradient>
+    <linearGradient id="windowLight" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="blazer" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2A3038"/>
+      <stop offset="100%" stop-color="#1A1F26"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8C29A"/>
+      <stop offset="100%" stop-color="#D4A574"/>
+    </linearGradient>
+    <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8A6B4F"/>
+      <stop offset="100%" stop-color="#6B4F3A"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4A3422"/>
+      <stop offset="100%" stop-color="#2C1D12"/>
+    </linearGradient>
+    <radialGradient id="softGlow" cx="50%" cy="42%" r="45%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#17191F" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Room -->
+  <rect width="640" height="520" rx="28" fill="url(#wall)"/>
+  <path d="M0 360H640V520H0Z" fill="url(#floor)"/>
+  <path d="M0 358H640" stroke="#C2BDB4" stroke-opacity="0.7"/>
+
+  <!-- Window frame + light -->
+  <rect x="438" y="48" width="148" height="196" rx="8" fill="#F8F7F3" stroke="#CFCBC3" stroke-width="3"/>
+  <path d="M512 48V244" stroke="#CFCBC3" stroke-width="2.5"/>
+  <path d="M438 146H586" stroke="#CFCBC3" stroke-width="2.5"/>
+  <rect x="448" y="58" width="58" height="78" rx="3" fill="#E8EEF5" opacity="0.85"/>
+  <rect x="520" y="58" width="56" height="78" rx="3" fill="#E8EEF5" opacity="0.85"/>
+  <rect x="448" y="150" width="58" height="82" rx="3" fill="#E8EEF5" opacity="0.7"/>
+  <rect x="520" y="150" width="56" height="82" rx="3" fill="#E8EEF5" opacity="0.7"/>
+  <path d="M360 40L620 280L620 360L280 80Z" fill="url(#windowLight)"/>
+
+  <!-- Soft ambient glow behind figure -->
+  <ellipse cx="292" cy="250" rx="170" ry="150" fill="url(#softGlow)"/>
+
+  <!-- Chair -->
+  <g filter="url(#softShadow)">
+    <path d="M214 250c0-34 28-62 78-62s78 28 78 62v86H214V250Z" fill="#2C333A"/>
+    <rect x="236" y="328" width="112" height="18" rx="6" fill="#23282E"/>
+    <rect x="278" y="346" width="18" height="58" rx="5" fill="#1A1F24"/>
+    <ellipse cx="287" cy="410" rx="42" ry="10" fill="#1A1F24" opacity="0.55"/>
+  </g>
+
+  <!-- Seated interviewer -->
+  <g filter="url(#softShadow)">
+    <!-- Legs under desk suggestion -->
+    <path d="M236 360c8 28 24 46 48 46s40-18 48-46" fill="#1E242B" opacity="0.35"/>
+
+    <!-- Torso / blazer -->
+    <path d="M232 268c8-46 34-74 60-74s52 28 60 74c4 28-8 58-28 70H260c-20-12-32-42-28-70Z" fill="url(#blazer)"/>
+    <!-- Lapel / shirt -->
+    <path d="M282 210c6 18 10 42 10 70h-12c-2-24-6-48-14-70 6-4 12-4 16 0Z" fill="#E8EEF2" opacity="0.92"/>
+    <path d="M302 210c-6 18-10 42-10 70h12c2-24 6-48 14-70-6-4-12-4-16 0Z" fill="#E8EEF2" opacity="0.78"/>
+    <path d="M284 208l8 78h-4l-10-76c2-2 4-2 6-2Z" fill="#D7DEE5"/>
+
+    <!-- Shoulders / sleeves -->
+    <path d="M232 250c-28 10-46 34-50 58 22 8 44 10 64 6-4-22-6-42-14-64Z" fill="#222830"/>
+    <path d="M352 250c28 10 46 34 50 58-22 8-44 10-64 6 4-22 6-42 14-64Z" fill="#222830"/>
+
+    <!-- Forearms on desk -->
+    <path d="M182 318c18-8 46-10 68-6 4 10-2 18-14 22-22 4-42 2-58-6-4-4-2-8 4-10Z" fill="url(#blazer)"/>
+    <path d="M334 312c22-4 50-2 68 6 6 2 8 6 4 10-16 8-36 10-58 6-12-4-18-12-14-22Z" fill="url(#blazer)"/>
+
+    <!-- Hands -->
+    <ellipse cx="188" cy="330" rx="16" ry="10" fill="url(#skin)"/>
+    <ellipse cx="396" cy="328" rx="16" ry="10" fill="url(#skin)"/>
+
+    <!-- Neck -->
+    <rect x="278" y="188" width="28" height="28" rx="10" fill="url(#skin)"/>
+
+    <!-- Head -->
+    <ellipse cx="292" cy="168" rx="38" ry="44" fill="url(#skin)"/>
+
+    <!-- Hair -->
+    <path d="M254 160c4-40 28-62 38-62 12 0 34 18 40 56-18-10-34-12-52-8-8 2-16 8-26 14Z" fill="url(#hair)"/>
+    <path d="M248 168c-2 18 2 34 10 46 2-16 6-30 14-42-8-2-16-2-24-4Z" fill="url(#hair)" opacity="0.9"/>
+    <path d="M336 168c2 18-2 34-10 46-2-16-6-30-14-42 8-2 16-2 24-4Z" fill="url(#hair)" opacity="0.9"/>
+
+    <!-- Ears -->
+    <ellipse cx="254" cy="172" rx="7" ry="10" fill="#D4A574"/>
+    <ellipse cx="330" cy="172" rx="7" ry="10" fill="#D4A574"/>
+
+    <!-- Eyes -->
+    <ellipse cx="278" cy="170" rx="5.5" ry="3.8" fill="#F8F6F2"/>
+    <ellipse cx="306" cy="170" rx="5.5" ry="3.8" fill="#F8F6F2"/>
+    <circle cx="278" cy="170" r="2.4" fill="#2F3A44"/>
+    <circle cx="306" cy="170" r="2.4" fill="#2F3A44"/>
+    <!-- Soft brow -->
+    <path d="M270 162c4-3 10-4 16-2" stroke="#5A4332" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+    <path d="M298 160c4-2 10-2 16 1" stroke="#5A4332" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+    <!-- Nose / mouth restrained -->
+    <path d="M292 174v10" stroke="#C48F62" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+    <path d="M284 194c5 4 11 4 16 0" stroke="#B67B58" stroke-width="1.7" stroke-linecap="round" opacity="0.75"/>
+  </g>
+
+  <!-- Desk -->
+  <g filter="url(#softShadow)">
+    <rect x="96" y="328" width="448" height="22" rx="6" fill="url(#desk)"/>
+    <rect x="118" y="350" width="16" height="78" rx="4" fill="#5A4130"/>
+    <rect x="506" y="350" width="16" height="78" rx="4" fill="#5A4130"/>
+    <!-- Notebook -->
+    <rect x="360" y="318" width="72" height="10" rx="2" fill="#F4F1EA"/>
+    <path d="M368 321H424" stroke="#D7D1C6" stroke-width="1"/>
+    <path d="M368 324H418" stroke="#D7D1C6" stroke-width="1"/>
+  </g>
+
+  <!-- Subtle indigo accent mark -->
+  <circle cx="88" cy="88" r="18" fill="#5657C9" opacity="0.12"/>
+  <circle cx="88" cy="88" r="8" fill="#5657C9" opacity="0.22"/>
+</svg>
