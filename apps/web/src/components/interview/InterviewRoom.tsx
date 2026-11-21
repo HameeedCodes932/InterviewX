@@ -49,7 +49,9 @@ export function InterviewRoom() {
   const [cameraOn, setCameraOn] = useState(false);
   const [deviceNotice, setDeviceNotice] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
 
   useEffect(() => {
@@ -57,6 +59,15 @@ export function InterviewRoom() {
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  useEffect(() => {
+    function syncFullscreen() {
+      const active = document.fullscreenElement === stageRef.current;
+      setIsFullscreen(active);
+    }
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
 
   if (!config) {
     return (
@@ -128,6 +139,26 @@ export function InterviewRoom() {
     router.push("/dashboard");
   }
 
+  async function toggleFullscreen() {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    try {
+      if (document.fullscreenElement === stage) {
+        await document.exitFullscreen();
+        return;
+      }
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+      await stage.requestFullscreen();
+    } catch {
+      setDeviceNotice(
+        "Fullscreen is unavailable in this browser or was blocked. Try again from the interview window control.",
+      );
+    }
+  }
+
   return (
     <div className="ix-dashboard-shell relative min-h-dvh">
       <div className="mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col px-3 py-3 min-[375px]:px-4 sm:px-6 sm:py-4 lg:px-8 lg:py-5">
@@ -162,14 +193,31 @@ export function InterviewRoom() {
 
         <main className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:gap-5">
           <section className="ix-room-stage flex min-h-0 flex-col">
-            <div className="relative overflow-hidden rounded-[1.15rem] bg-[#1c1e24]">
+            <div
+              ref={stageRef}
+              className={`relative overflow-hidden rounded-[1.15rem] bg-[#1c1e24] ${
+                isFullscreen ? "flex h-dvh w-screen items-center justify-center rounded-none bg-black" : ""
+              }`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/ai-interviewer-portrait.jpg"
                 alt="Professional AI interviewer seated and facing the camera"
-                className="aspect-[4/3] h-auto w-full object-cover object-[center_18%] sm:aspect-[16/10] lg:aspect-[16/11] lg:max-h-[min(52vh,520px)]"
+                className={
+                  isFullscreen
+                    ? "max-h-dvh w-full object-contain object-center"
+                    : "aspect-[4/3] h-auto w-full object-cover object-[center_18%] sm:aspect-[16/10] lg:aspect-[16/11] lg:max-h-[min(52vh,520px)]"
+                }
                 draggable={false}
               />
+              <button
+                type="button"
+                className="absolute right-3 top-3 z-10 rounded-full border border-white/25 bg-black/50 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-black/65"
+                aria-pressed={isFullscreen}
+                onClick={toggleFullscreen}
+              >
+                {isFullscreen ? "Exit full screen" : "Full screen"}
+              </button>
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-3 pb-3 pt-10 sm:px-4 sm:pb-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-ix-graphite">
@@ -313,6 +361,18 @@ export function InterviewRoom() {
                 onClick={toggleCamera}
               >
                 Camera {cameraOn ? "on" : "off"}
+              </button>
+              <button
+                type="button"
+                className={`rounded-full border px-3.5 py-2 text-sm font-medium transition ${
+                  isFullscreen
+                    ? "border-[#4f51b8] bg-[#4f51b8]/12 text-[#3f41a8]"
+                    : "border-[#c4bfb5] bg-white text-ix-charcoal"
+                }`}
+                aria-pressed={isFullscreen}
+                onClick={toggleFullscreen}
+              >
+                {isFullscreen ? "Exit full screen" : "Full screen"}
               </button>
               <button
                 type="button"
