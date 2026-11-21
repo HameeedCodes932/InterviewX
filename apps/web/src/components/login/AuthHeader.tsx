@@ -29,18 +29,21 @@ function LogoMark() {
 
 export function AuthHeader() {
   return (
-    <header className="flex items-center justify-between gap-4">
+    <header className="flex items-center justify-between gap-2 min-[375px]:gap-4">
       <Link
         href="/login"
-        className="group inline-flex items-center gap-2.5 text-ix-graphite transition hover:opacity-90"
+        className="group inline-flex min-w-0 items-center gap-2 text-ix-graphite transition hover:opacity-90 min-[375px]:gap-2.5"
       >
         <LogoMark />
-        <span className="font-display text-[1.35rem] tracking-tight sm:text-[1.5rem]">
+        <span className="truncate font-display text-[1.25rem] font-semibold tracking-tight min-[375px]:text-[1.4rem] sm:text-[1.55rem]">
           InterviewX
         </span>
       </Link>
 
-      <Link href="/signup" className="ix-btn-secondary shrink-0 px-4 py-2 sm:px-5">
+      <Link
+        href="/signup"
+        className="ix-btn-secondary shrink-0 px-3 py-1.5 text-xs min-[375px]:px-4 min-[375px]:py-2 min-[375px]:text-sm sm:px-5"
+      >
         Create account
       </Link>
     </header>

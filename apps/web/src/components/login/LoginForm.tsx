@@ -99,17 +99,17 @@ export function LoginForm() {
   }
 
   return (
-    <div className="rounded-ix border border-ix-charcoal/8 bg-ix-softgrey/90 p-6 shadow-soft backdrop-blur-sm sm:p-8">
+    <div className="ix-login-card">
       <div>
-        <h2 className="font-display text-2xl tracking-tight text-ix-graphite sm:text-[1.75rem]">
+        <h2 className="font-display text-[1.65rem] tracking-tight text-ix-graphite sm:text-[1.75rem]">
           Welcome back
         </h2>
-        <p className="mt-2 text-sm text-ix-charcoal/65">
+        <p className="mt-1.5 text-sm text-ix-charcoal/60">
           Sign in to your InterviewX account.
         </p>
       </div>
 
-      <form className="mt-7 space-y-5" onSubmit={onSubmit} noValidate>
+      <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
         <div>
           <label
             htmlFor={emailId}
@@ -220,9 +220,9 @@ export function LoginForm() {
         </button>
       </form>
 
-      <div className="my-6 flex items-center gap-3" aria-hidden>
+      <div className="my-5 flex items-center gap-3" aria-hidden>
         <div className="h-px flex-1 bg-ix-charcoal/10" />
-        <span className="text-xs font-medium uppercase tracking-[0.14em] text-ix-silver">
+        <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-ix-silver">
           or
         </span>
         <div className="h-px flex-1 bg-ix-charcoal/10" />
@@ -235,7 +235,7 @@ export function LoginForm() {
         </Link>
       </p>
 
-      <p className="mt-5 text-center text-[11px] leading-relaxed text-ix-charcoal/40">
+      <p className="mt-4 text-center text-[11px] leading-relaxed text-ix-charcoal/38">
         Google and GitHub sign-in are omitted until authentication infrastructure
         supports them.
       </p>

@@ -4,25 +4,33 @@ import { LoginVisual } from "@/components/login/LoginVisual";
 
 export default function LoginPage() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-10">
+    <div className="relative min-h-dvh lg:h-dvh lg:overflow-hidden">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[1180px] flex-col px-3 py-4 min-[375px]:px-4 sm:px-6 sm:py-5 lg:h-dvh lg:max-h-dvh lg:px-8 lg:py-6">
         <AuthHeader />
 
-        <main className="mt-6 flex flex-1 flex-col justify-center lg:mt-10">
-          <div className="grid items-stretch gap-6 lg:grid-cols-2 lg:gap-10 xl:gap-14">
-            <section className="order-1">
+        <main className="mt-4 flex min-h-0 flex-1 flex-col lg:mt-5">
+          {/* Mobile / tablet: compact visual then form */}
+          <div className="flex flex-1 flex-col gap-4 lg:hidden">
+            <LoginVisual compact />
+            <div className="mx-auto w-full max-w-md flex-1">
+              <LoginForm />
+            </div>
+          </div>
+
+          {/* Desktop: balanced split, viewport-fit */}
+          <div className="hidden min-h-0 flex-1 grid-cols-[1.12fr_0.88fr] items-stretch gap-8 lg:grid xl:gap-10">
+            <section className="min-h-0">
               <LoginVisual />
             </section>
-
-            <section className="order-2 flex items-center">
-              <div className="w-full max-w-md lg:ml-auto lg:max-w-[420px]">
+            <section className="flex min-h-0 items-center justify-end">
+              <div className="w-full max-w-[400px]">
                 <LoginForm />
               </div>
             </section>
           </div>
         </main>
 
-        <footer className="mt-8 pb-2 text-center text-xs text-ix-charcoal/40 sm:text-left">
+        <footer className="mt-3 shrink-0 pb-1 text-center text-[11px] text-ix-charcoal/35 sm:text-left">
           © {new Date().getFullYear()} InterviewX
         </footer>
       </div>

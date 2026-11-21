@@ -1,77 +1,75 @@
+type Props = {
+  compact?: boolean;
+};
+
 /**
- * Licence-safe original composition — Hybrid Luxury interviewer panel.
- * Not a third-party photo or avatar runtime.
+ * Left visual panel — Hybrid Luxury atmosphere + polished SVG scene.
  */
-export function LoginVisual() {
+export function LoginVisual({ compact = false }: Props) {
+  if (compact) {
+    return (
+      <aside className="relative overflow-hidden rounded-[1.25rem] border border-[#d9d6cf] bg-gradient-to-br from-[#f4f2ed] to-[#e5e2db] shadow-[0_18px_40px_-28px_rgba(23,25,31,0.4)]">
+        <div className="grid grid-cols-[1.15fr_0.85fr] items-end gap-2 px-4 pb-0 pt-4">
+          <div className="pb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ix-charcoal/50">
+              Welcome back
+            </p>
+            <h1 className="mt-1.5 font-display text-[1.35rem] leading-[1.18] tracking-tight text-ix-graphite">
+              Interview readiness, practised with presence.
+            </h1>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/interviewer-scene.svg"
+            alt=""
+            width={640}
+            height={520}
+            className="h-[118px] w-full object-contain object-bottom"
+            draggable={false}
+            aria-hidden
+          />
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <div className="relative overflow-hidden rounded-ix bg-gradient-to-br from-[#ebeae5] via-[#e3e2de] to-[#d8d7d2] shadow-card">
+    <aside className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.35rem] border border-[#d9d6cf] bg-gradient-to-b from-[#f4f2ed] via-[#ebe8e2] to-[#ddd9d1] shadow-[0_24px_60px_-36px_rgba(23,25,31,0.45)]">
       <div
-        className="pointer-events-none absolute inset-0 opacity-70"
+        className="pointer-events-none absolute inset-0"
         aria-hidden
         style={{
           backgroundImage:
-            "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.55), transparent 42%), radial-gradient(circle at 78% 70%, rgba(86,87,201,0.12), transparent 40%)",
+            "radial-gradient(ellipse 70% 55% at 18% 12%, rgba(255,255,255,0.7), transparent 55%), radial-gradient(ellipse 55% 45% at 86% 18%, rgba(86,87,201,0.10), transparent 50%), linear-gradient(165deg, transparent 40%, rgba(23,25,31,0.04) 100%)",
         }}
       />
 
-      <div className="relative flex min-h-[280px] flex-col justify-between p-6 sm:min-h-[340px] sm:p-8 lg:min-h-[520px] lg:p-10">
-        <div className="max-w-md">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-ix-charcoal/55">
+      <div className="relative z-[1] flex h-full min-h-0 flex-col px-7 pt-7 sm:px-8 sm:pt-8 lg:px-10 lg:pt-9">
+        <div className="max-w-lg shrink-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#25262B]/opacity-50">
             Welcome back
           </p>
-          <h1 className="mt-3 font-display text-[2rem] leading-[1.12] tracking-tight text-ix-graphite sm:text-[2.35rem] lg:text-[2.75rem]">
+          <h1 className="mt-2.5 font-display text-[1.85rem] leading-[1.12] tracking-tight text-ix-graphite sm:text-[2.15rem] lg:text-[2.4rem]">
             Interview readiness, practised with presence.
           </h1>
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-ix-charcoal/70 sm:text-[15px]">
+          <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ix-charcoal/65 sm:text-[15px]">
             Sign in to continue preparing with a professional virtual interviewer —
             calm, attentive, and designed for real interview rhythm.
           </p>
         </div>
 
-        {/* Stylised seated interviewer silhouette */}
-        <div className="relative mt-8 flex flex-1 items-end justify-center lg:mt-0">
-          <div className="relative h-[200px] w-full max-w-[280px] sm:h-[240px] lg:h-[300px]">
-            {/* Desk */}
-            <div className="absolute bottom-[18%] left-1/2 z-10 h-3 w-[86%] -translate-x-1/2 rounded-md bg-[#6d5644]/shadow-sm" />
-            <div className="absolute bottom-[8%] left-[12%] h-[12%] w-[8%] rounded-sm bg-[#4f3d30]" />
-            <div className="absolute bottom-[8%] right-[12%] h-[12%] w-[8%] rounded-sm bg-[#4f3d30]" />
-
-            {/* Chair back */}
-            <div className="absolute bottom-[28%] left-1/2 h-[42%] w-[38%] -translate-x-1/2 rounded-t-[1.4rem] bg-[#2c333a]" />
-
-            {/* Torso / blazer */}
-            <div className="absolute bottom-[30%] left-1/2 h-[28%] w-[34%] -translate-x-1/2 rounded-[1.1rem] bg-[#1a2f38] shadow-sm" />
-            <div className="absolute bottom-[36%] left-1/2 h-[18%] w-[18%] -translate-x-1/2 rounded-md bg-[#0d7377]/opacity-90" />
-
-            {/* Arms on desk */}
-            <div className="absolute bottom-[20%] left-[22%] h-[8%] w-[22%] rotate-[-8deg] rounded-full bg-[#1a2f38]" />
-            <div className="absolute bottom-[20%] right-[22%] h-[8%] w-[22%] rotate-[8deg] rounded-full bg-[#1a2f38]" />
-            <div className="absolute bottom-[21%] left-[28%] h-[5%] w-[12%] rounded-full bg-[#d4a574]" />
-            <div className="absolute bottom-[21%] right-[28%] h-[5%] w-[12%] rounded-full bg-[#d4a574]" />
-
-            {/* Head */}
-            <div className="absolute bottom-[54%] left-1/2 h-[22%] w-[22%] -translate-x-1/2 rounded-[45%] bg-[#e0ac69] shadow-sm" />
-            {/* Hair */}
-            <div className="absolute bottom-[68%] left-1/2 h-[12%] w-[24%] -translate-x-1/2 rounded-[50%] bg-[#3b2614]" />
-            <div className="absolute bottom-[52%] left-[38%] h-[20%] w-[8%] rounded-b-full bg-[#3b2614]/opacity-90" />
-            <div className="absolute bottom-[52%] right-[38%] h-[20%] w-[8%] rounded-b-full bg-[#3b2614]/opacity-90" />
-            {/* Eyes */}
-            <div className="absolute bottom-[64%] left-[45%] h-[3%] w-[3%] rounded-full bg-[#2e5a3c]" />
-            <div className="absolute bottom-[64%] right-[45%] h-[3%] w-[3%] rounded-full bg-[#2e5a3c]" />
-
-            {/* Soft glow behind figure */}
-            <div
-              className="absolute bottom-[25%] left-1/2 h-[55%] w-[70%] -translate-x-1/2 rounded-full opacity-40 blur-2xl"
-              style={{ background: "radial-gradient(circle, rgba(255,255,255,0.7), transparent 70%)" }}
-              aria-hidden
-            />
-          </div>
+        <div className="relative mt-4 flex min-h-0 flex-1 items-end justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/interviewer-scene.svg"
+            alt="Professional seated interviewer at a desk in a calm interview room"
+            width={640}
+            height={520}
+            className="h-auto w-full max-w-[560px] translate-y-1 select-none object-contain object-bottom lg:max-h-[min(48vh,400px)]"
+            draggable={false}
+          />
         </div>
-
-        <p className="mt-4 text-xs text-ix-charcoal/45">
-          Professional interviewer presence — calm, seated, interview-ready.
-        </p>
       </div>
-    </div>
+    </aside>
   );
 }
