@@ -5,7 +5,7 @@ import { WelcomeSection } from "@/components/dashboard/WelcomeSection";
 
 export default function DashboardPage() {
   return (
-    <div className="relative min-h-dvh">
+    <div className="ix-dashboard-shell relative min-h-dvh">
       <div className="mx-auto flex min-h-dvh w-full max-w-[1180px] flex-col px-3 py-4 min-[375px]:px-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
         <DashboardHeader />
 
@@ -15,7 +15,7 @@ export default function DashboardPage() {
           <HowItWorks />
         </main>
 
-        <footer className="mt-8 shrink-0 border-t border-[#d9d6cf]/60 pb-1 pt-4 text-center text-[11px] text-ix-charcoal/35 sm:text-left">
+        <footer className="mt-8 shrink-0 border-t border-[#c9c5bc]/80 pb-1 pt-4 text-center text-[11px] text-ix-charcoal/45 sm:text-left">
           © {new Date().getFullYear()} InterviewX
         </footer>
       </div>

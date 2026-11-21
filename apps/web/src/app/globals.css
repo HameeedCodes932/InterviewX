@@ -109,14 +109,23 @@
     }
   }
 
+  /* Dashboard-only shell — keeps login/signup page atmosphere unchanged. */
+  .ix-dashboard-shell {
+    background-color: #d9d6cf;
+    background-image:
+      radial-gradient(ellipse 85% 55% at 6% 0%, rgba(245, 243, 238, 0.9), transparent 55%),
+      radial-gradient(ellipse 60% 45% at 100% 8%, rgba(86, 87, 201, 0.11), transparent 50%),
+      linear-gradient(180deg, #e2dfd7 0%, #d9d6cf 55%, #d1cec6 100%);
+  }
+
   .ix-dash-welcome {
     border-radius: 1.35rem;
-    border: 1px solid #d9d6cf;
-    background: linear-gradient(145deg, #f4f2ed 0%, #ebe8e2 55%, #e3e0d9 100%);
+    border: 1px solid #bdb8ae;
+    background: linear-gradient(145deg, #ffffff 0%, #f3f0ea 52%, #e8e4db 100%);
     padding: 1.5rem;
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.7) inset,
-      0 22px 50px -34px rgba(23, 25, 31, 0.35);
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 24px 50px -26px rgba(23, 25, 31, 0.48);
   }
 
   @media (min-width: 640px) {
@@ -127,12 +136,12 @@
 
   .ix-dash-panel {
     border-radius: 1.35rem;
-    border: 1px solid #d9d6cf;
-    background: #f3f2ee;
+    border: 1px solid #bdb8ae;
+    background: #f4f2ec;
     padding: 1.35rem;
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.65) inset,
-      0 18px 44px -32px rgba(23, 25, 31, 0.32);
+      0 1px 0 rgba(255, 255, 255, 0.85) inset,
+      0 20px 46px -26px rgba(23, 25, 31, 0.42);
   }
 
   @media (min-width: 640px) {
@@ -142,24 +151,43 @@
   }
 
   .ix-dash-card {
-    border-radius: 1.25rem;
-    border: 1px solid #d9d6cf;
-    background: #f7f6f2;
-    padding: 1.25rem;
+    border-radius: 1.15rem;
+    border: 1px solid #b7b2a7;
+    background: #ffffff;
+    padding: 0.85rem;
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.7) inset,
-      0 16px 36px -28px rgba(23, 25, 31, 0.3);
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 16px 34px -20px rgba(23, 25, 31, 0.42);
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-card {
+      border-radius: 1.25rem;
+      padding: 1.25rem;
+    }
   }
 
   .ix-dash-card-available {
-    border-color: rgba(86, 87, 201, 0.28);
-    background: linear-gradient(165deg, #f8f7f4 0%, #f1f0f8 100%);
+    border-color: #4f51b8;
+    border-width: 1.5px;
+    background: linear-gradient(165deg, #ffffff 0%, #eceefb 55%, #e0e3f7 100%);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.75) inset,
-      0 20px 44px -28px rgba(86, 87, 201, 0.28);
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 20px 42px -18px rgba(79, 81, 184, 0.48);
   }
 
   .ix-dash-card-soon {
-    opacity: 0.92;
+    background: #f8f6f1;
+    border-color: #aea99d;
+  }
+
+  .ix-dash-btn-soon {
+    @apply inline-flex w-full cursor-not-allowed items-center justify-center rounded-full border border-[#a8a297] bg-[#ddd8ce] px-3 py-2 text-[13px] font-medium text-[#3f3d39];
+  }
+
+  @media (min-width: 640px) {
+    .ix-dash-btn-soon {
+      @apply px-4 py-2 text-sm;
+    }
   }
 }

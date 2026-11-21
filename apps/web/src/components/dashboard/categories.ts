@@ -26,7 +26,7 @@ export const INTERVIEW_CATEGORIES: InterviewCategory[] = [
     description:
       "Practise technical interviews covering programming, data structures, algorithms, software engineering concepts, and problem-solving.",
     status: "available",
-    accent: "#5657C9",
+    accent: "#4F51B8",
     Icon: IconSoftwareEngineering,
   },
   {
@@ -35,7 +35,7 @@ export const INTERVIEW_CATEGORIES: InterviewCategory[] = [
     description:
       "Prepare for psychological assessment, intelligence, personality, and officer-selection interviews.",
     status: "coming_soon",
-    accent: "#3F6F8A",
+    accent: "#2F6F7C",
     Icon: IconIssb,
   },
   {
@@ -44,7 +44,7 @@ export const INTERVIEW_CATEGORIES: InterviewCategory[] = [
     description:
       "Practise interviews covering machine learning, deep learning, NLP, LLMs, and AI engineering.",
     status: "coming_soon",
-    accent: "#5A6BB5",
+    accent: "#5B4F9E",
     Icon: IconAiMl,
   },
   {
@@ -53,7 +53,7 @@ export const INTERVIEW_CATEGORIES: InterviewCategory[] = [
     description:
       "Prepare for competitive examination interviews, current affairs, general knowledge, and personality assessment.",
     status: "coming_soon",
-    accent: "#6B5E4E",
+    accent: "#8A6B3D",
     Icon: IconCssPms,
   },
   {
@@ -62,7 +62,7 @@ export const INTERVIEW_CATEGORIES: InterviewCategory[] = [
     description:
       "Prepare for university admission, international scholarships, academic, and research interviews.",
     status: "coming_soon",
-    accent: "#4F7A64",
+    accent: "#2F7A5C",
     Icon: IconScholarship,
   },
   {
@@ -71,7 +71,7 @@ export const INTERVIEW_CATEGORIES: InterviewCategory[] = [
     description:
       "Practise behavioural, situational, communication, and HR interviews.",
     status: "coming_soon",
-    accent: "#7A5B6E",
+    accent: "#8B4E6A",
     Icon: IconHrBehavioural,
   },
 ];

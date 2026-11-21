@@ -23,16 +23,16 @@ export function HowItWorks() {
       aria-labelledby="how-it-works-heading"
     >
       <div className="max-w-2xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ix-charcoal/45">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ix-charcoal/55">
           Your interview journey
         </p>
         <h2
           id="how-it-works-heading"
-          className="mt-1.5 font-display text-[1.35rem] tracking-tight text-ix-graphite sm:text-[1.5rem]"
+          className="mt-1.5 font-display text-[1.35rem] tracking-tight text-ix-graphite sm:text-[1.55rem]"
         >
           How InterviewX works
         </h2>
-        <p className="mt-2 text-sm text-ix-charcoal/55">
+        <p className="mt-2 text-sm text-ix-charcoal/65">
           A simple path from category selection to deliberate practice — without
           inventing history or scores before the engine is ready.
         </p>
@@ -42,15 +42,15 @@ export function HowItWorks() {
         {STEPS.map((item) => (
           <li
             key={item.step}
-            className="rounded-[1.1rem] border border-[#e0ddd6] bg-[#fafaf7]/80 px-4 py-4"
+            className="rounded-[1.1rem] border border-[#c9c5bc] bg-white/80 px-4 py-4 shadow-[0_10px_24px_-20px_rgba(23,25,31,0.35)]"
           >
-            <span className="font-display text-sm font-semibold tracking-wide text-ix-indigo">
+            <span className="font-display text-sm font-semibold tracking-wide text-[#3f41a8]">
               {item.step}
             </span>
             <h3 className="mt-2 text-[15px] font-medium text-ix-graphite">
               {item.title}
             </h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-ix-charcoal/55">
+            <p className="mt-1.5 text-sm leading-relaxed text-ix-charcoal/65">
               {item.body}
             </p>
           </li>
