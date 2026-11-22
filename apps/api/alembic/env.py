@@ -1,4 +1,9 @@
-"""Alembic environment — reads DATABASE_URL from application settings."""
+"""Alembic environment — reads DATABASE_URL from application settings.
+
+Database URLs are applied directly (not via ConfigParser set_main_option)
+so percent-encoded passwords (e.g. %40, %25) are not corrupted by
+ConfigParser interpolation.
+"""
 
 from logging.config import fileConfig
 
@@ -15,14 +20,15 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+
+def get_database_url() -> str:
+    """Return the configured database URL without logging credentials."""
+    return get_settings().database_url
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=get_database_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -34,8 +40,12 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    # Inject URL into the section dict so ConfigParser never interpolates `%`.
+    configuration = config.get_section(config.config_ini_section, {}) or {}
+    configuration["sqlalchemy.url"] = get_database_url()
+
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
