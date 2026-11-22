@@ -2,29 +2,28 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   InterviewApiError,
-  beginLoadMore,
-  completeLoadMoreFailure,
-  completeLoadMoreSuccess,
-  completeLoadMoreUnauthenticated,
   listInterviewSessions,
+  runHistoryLoadMore,
   type InterviewSession,
 } from "@/lib/interviews";
 import { SessionHistoryCard } from "./SessionHistoryCard";
 
 const PAGE_SIZE = 10;
 
+type ReadyLoadState = {
+  status: "ready";
+  items: InterviewSession[];
+  total: number;
+  loadingMore: boolean;
+  loadMoreError: string | null;
+};
+
 type LoadState =
   | { status: "loading" }
-  | {
-      status: "ready";
-      items: InterviewSession[];
-      total: number;
-      loadingMore: boolean;
-      loadMoreError: string | null;
-    }
+  | ReadyLoadState
   | { status: "empty" }
   | { status: "error"; message: string };
 
@@ -38,11 +37,17 @@ export function InterviewHistory() {
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [retryToken, setRetryToken] = useState(0);
   const [trackedRetry, setTrackedRetry] = useState(0);
+  const loadRef = useRef(load);
+  const loadMoreInFlight = useRef(false);
 
   if (retryToken !== trackedRetry) {
     setTrackedRetry(retryToken);
     setLoad({ status: "loading" });
   }
+
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,55 +91,27 @@ export function InterviewHistory() {
   }, [retryToken, router]);
 
   async function loadMore() {
-    let offset = 0;
-    let started = false;
-
-    setLoad((prev) => {
-      if (prev.status !== "ready") return prev;
-      const next = beginLoadMore(prev);
-      if (!next) return prev;
-      started = true;
-      offset = next.items.length;
-      return { status: "ready", ...next };
-    });
-
-    if (!started) return;
-
-    try {
-      const payload = await listInterviewSessions({
-        limit: PAGE_SIZE,
-        offset,
-      });
-      setLoad((prev) => {
-        if (prev.status !== "ready") return prev;
-        return {
-          status: "ready",
-          ...completeLoadMoreSuccess(prev, payload),
-        };
-      });
-    } catch (error: unknown) {
-      if (
-        error instanceof InterviewApiError &&
-        error.code === "unauthenticated"
-      ) {
+    await runHistoryLoadMore({
+      pageSize: PAGE_SIZE,
+      inFlight: loadMoreInFlight,
+      getReadySnapshot: () => {
+        const current = loadRef.current;
+        return current.status === "ready" ? current : null;
+      },
+      setReady: (updater) => {
         setLoad((prev) => {
           if (prev.status !== "ready") return prev;
-          return {
-            status: "ready",
-            ...completeLoadMoreUnauthenticated(prev),
-          };
+          return { status: "ready", ...updater(prev) };
         });
+      },
+      listSessions: listInterviewSessions,
+      isUnauthenticated: (error) =>
+        error instanceof InterviewApiError && error.code === "unauthenticated",
+      onUnauthenticated: () => {
         router.replace("/login");
-        return;
-      }
-      setLoad((prev) => {
-        if (prev.status !== "ready") return prev;
-        return {
-          status: "ready",
-          ...completeLoadMoreFailure(prev, loadMoreErrorMessage(error)),
-        };
-      });
-    }
+      },
+      mapError: loadMoreErrorMessage,
+    });
   }
 
   return (

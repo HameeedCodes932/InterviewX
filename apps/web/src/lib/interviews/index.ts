@@ -66,8 +66,13 @@ export {
   completeLoadMoreFailure,
   completeLoadMoreSuccess,
   completeLoadMoreUnauthenticated,
+  runHistoryLoadMore,
 } from "./historyLoadMore";
-export type { ReadyHistoryPage } from "./historyLoadMore";
+export type {
+  LoadMoreInFlightLock,
+  ReadyHistoryPage,
+  RunHistoryLoadMoreDeps,
+} from "./historyLoadMore";
 
 export class InterviewApiError extends Error {
   code: string;

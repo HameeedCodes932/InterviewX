@@ -1,9 +1,15 @@
 /**
- * Pure Load More transitions for Interview History.
+ * Load More transitions + request orchestration for Interview History.
  * Keeps already-loaded sessions visible when a later page fails.
+ *
+ * Request triggering uses a synchronous in-flight lock and reads offset from a
+ * ready snapshot *before* any React state update (never inside a setState updater).
  */
 
-import type { InterviewSession } from "./types";
+import type {
+  InterviewSession,
+  InterviewSessionListResponse,
+} from "./types";
 
 export type ReadyHistoryPage = {
   items: InterviewSession[];
@@ -65,4 +71,66 @@ export function completeLoadMoreUnauthenticated(
     loadingMore: false,
     loadMoreError: null,
   };
+}
+
+export type LoadMoreInFlightLock = { current: boolean };
+
+export type RunHistoryLoadMoreDeps = {
+  pageSize: number;
+  inFlight: LoadMoreInFlightLock;
+  /** Latest ready page, or null when history is not in the ready state. */
+  getReadySnapshot: () => ReadyHistoryPage | null;
+  /** Pure-ready updater; the component wraps this into setLoad. */
+  setReady: (updater: (prev: ReadyHistoryPage) => ReadyHistoryPage) => void;
+  listSessions: (params: {
+    limit: number;
+    offset: number;
+  }) => Promise<InterviewSessionListResponse>;
+  isUnauthenticated: (error: unknown) => boolean;
+  onUnauthenticated: () => void;
+  mapError: (error: unknown) => string;
+};
+
+/**
+ * Starts the next-page request when allowed.
+ * Returns true when a network request was started.
+ */
+export async function runHistoryLoadMore(
+  deps: RunHistoryLoadMoreDeps,
+): Promise<boolean> {
+  if (deps.inFlight.current) return false;
+
+  const snapshot = deps.getReadySnapshot();
+  if (!snapshot) return false;
+  if (snapshot.items.length >= snapshot.total) return false;
+
+  const offset = snapshot.items.length;
+
+  deps.inFlight.current = true;
+  deps.setReady((prev) => ({
+    ...prev,
+    loadingMore: true,
+    loadMoreError: null,
+  }));
+
+  try {
+    const payload = await deps.listSessions({
+      limit: deps.pageSize,
+      offset,
+    });
+    deps.setReady((prev) => completeLoadMoreSuccess(prev, payload));
+    return true;
+  } catch (error: unknown) {
+    if (deps.isUnauthenticated(error)) {
+      deps.setReady((prev) => completeLoadMoreUnauthenticated(prev));
+      deps.onUnauthenticated();
+      return true;
+    }
+    deps.setReady((prev) =>
+      completeLoadMoreFailure(prev, deps.mapError(error)),
+    );
+    return true;
+  } finally {
+    deps.inFlight.current = false;
+  }
 }
