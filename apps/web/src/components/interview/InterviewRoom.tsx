@@ -11,10 +11,23 @@ import {
 } from "react";
 import { LogoMark } from "@/components/dashboard/LogoMark";
 import {
+  DEFAULT_INTERVIEW_GREETING,
   InterviewApiError,
+  beginOptimisticMessage,
+  canSubmitCandidateReply,
   completeInterviewSession,
+  completeMessageSave,
+  createInterviewMessage,
+  failMessageSave,
   getInterviewSession,
+  greetingClientMessageId,
+  hasPendingSave,
+  listInterviewMessages,
+  markMessageSaving,
+  messagesFromApi,
+  newClientMessageId,
   type InterviewSession,
+  type RoomMessage,
 } from "@/lib/interviews";
 import {
   difficultyLabel,
@@ -27,15 +40,6 @@ import type {
   ExperienceLevelId,
 } from "./setupOptions";
 
-type ChatMessage = {
-  id: string;
-  speaker: "interviewer" | "candidate";
-  text: string;
-};
-
-const GREETING =
-  "Hello! Welcome to your Software Engineering interview. Let's start by getting to know you. Could you briefly introduce yourself and tell me about your technical background?";
-
 type InterviewRoomProps = {
   sessionId: string;
 };
@@ -45,6 +49,11 @@ type LoadState =
   | { status: "ready"; session: InterviewSession }
   | { status: "not_found"; message: string }
   | { status: "network"; message: string };
+
+type TranscriptState =
+  | { status: "loading" }
+  | { status: "ready" }
+  | { status: "error"; message: string };
 
 export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const router = useRouter();
@@ -56,9 +65,10 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     setTrackedKey(requestKey);
     setLoad({ status: "loading" });
   }
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: "greeting", speaker: "interviewer", text: GREETING },
-  ]);
+  const [transcript, setTranscript] = useState<TranscriptState>({
+    status: "loading",
+  });
+  const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState<string | null>(null);
   const [micOn, setMicOn] = useState(false);
@@ -70,22 +80,22 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
+  const sendInFlight = useRef(false);
   const inputId = useId();
 
   useEffect(() => {
     let cancelled = false;
+    setTranscript({ status: "loading" });
+    setMessages([]);
 
-    getInterviewSession(sessionId)
-      .then((session) => {
-        if (!cancelled) setLoad({ status: "ready", session });
-      })
-      .catch((error: unknown) => {
+    async function loadRoom() {
+      let session: InterviewSession;
+      try {
+        session = await getInterviewSession(sessionId);
+      } catch (error: unknown) {
         if (cancelled) return;
         if (error instanceof InterviewApiError && error.code === "not_found") {
-          setLoad({
-            status: "not_found",
-            message: error.message,
-          });
+          setLoad({ status: "not_found", message: error.message });
           return;
         }
         if (
@@ -102,7 +112,57 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               ? error.message
               : "Unable to load the interview session.",
         });
-      });
+        return;
+      }
+
+      if (cancelled) return;
+      setLoad({ status: "ready", session });
+
+      try {
+        const listed = await listInterviewMessages(sessionId);
+        if (cancelled) return;
+
+        let nextMessages = messagesFromApi(listed.items);
+        if (nextMessages.length === 0 && session.status !== "completed") {
+          const greetingId = greetingClientMessageId(sessionId);
+          setMessages(
+            beginOptimisticMessage([], {
+              clientMessageId: greetingId,
+              speaker: "interviewer",
+              text: DEFAULT_INTERVIEW_GREETING,
+            }),
+          );
+          const saved = await createInterviewMessage(sessionId, {
+            speaker: "interviewer",
+            content: DEFAULT_INTERVIEW_GREETING,
+            client_message_id: greetingId,
+          });
+          if (cancelled) return;
+          nextMessages = messagesFromApi([saved]);
+        }
+
+        setMessages(nextMessages);
+        setTranscript({ status: "ready" });
+      } catch (error: unknown) {
+        if (cancelled) return;
+        if (
+          error instanceof InterviewApiError &&
+          error.code === "unauthenticated"
+        ) {
+          router.replace("/login");
+          return;
+        }
+        setTranscript({
+          status: "error",
+          message:
+            error instanceof InterviewApiError
+              ? error.message
+              : "Unable to load the conversation.",
+        });
+      }
+    }
+
+    void loadRoom();
 
     return () => {
       cancelled = true;
@@ -208,25 +268,98 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const experience = session.experience_level as ExperienceLevelId;
   const difficulty = session.difficulty as DifficultyId;
   const duration = session.duration_minutes as DurationMinutes;
+  const transcriptBusy =
+    transcript.status === "loading" || hasPendingSave(messages);
 
-  function submitMessage(event: FormEvent) {
+  async function persistMessage(input: {
+    clientMessageId: string;
+    speaker: "interviewer" | "candidate";
+    text: string;
+  }) {
+    try {
+      const saved = await createInterviewMessage(sessionId, {
+        speaker: input.speaker,
+        content: input.text,
+        client_message_id: input.clientMessageId,
+      });
+      setMessages((current) => completeMessageSave(current, saved));
+      return true;
+    } catch (error: unknown) {
+      if (
+        error instanceof InterviewApiError &&
+        error.code === "unauthenticated"
+      ) {
+        router.replace("/login");
+        return false;
+      }
+      setMessages((current) =>
+        failMessageSave(
+          current,
+          input.clientMessageId,
+          error instanceof InterviewApiError
+            ? error.message
+            : "Unable to save the message.",
+        ),
+      );
+      return false;
+    }
+  }
+
+  async function submitMessage(event: FormEvent) {
     event.preventDefault();
-    if (isCompleted) return;
+    if (isCompleted || ending || sendInFlight.current) return;
+    if (transcript.status !== "ready") return;
+
     const text = draft.trim();
-    if (!text) {
-      setDraftError("Enter a response before sending.");
+    if (
+      !canSubmitCandidateReply({
+        isCompleted,
+        draft: text,
+        messages,
+      })
+    ) {
+      if (!text) setDraftError("Enter a response before sending.");
       return;
     }
+
+    const clientMessageId = newClientMessageId();
+    sendInFlight.current = true;
     setDraftError(null);
-    setMessages((current) => [
-      ...current,
-      {
-        id: `candidate-${Date.now()}`,
+    setDraft("");
+    setMessages((current) =>
+      beginOptimisticMessage(current, {
+        clientMessageId,
         speaker: "candidate",
         text,
-      },
-    ]);
-    setDraft("");
+      }),
+    );
+
+    try {
+      await persistMessage({
+        clientMessageId,
+        speaker: "candidate",
+        text,
+      });
+    } finally {
+      sendInFlight.current = false;
+    }
+  }
+
+  async function retryFailedMessage(message: RoomMessage) {
+    if (isCompleted || ending || sendInFlight.current) return;
+    if (message.status !== "failed") return;
+
+    sendInFlight.current = true;
+    setMessages((current) => markMessageSaving(current, message.clientMessageId));
+    try {
+      await persistMessage({
+        clientMessageId: message.clientMessageId,
+        speaker: message.speaker,
+        text: message.text,
+      });
+    } finally {
+      sendInFlight.current = false;
+    }
   }
 
   function toggleMic() {
@@ -434,7 +567,11 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 Conversation
               </h2>
               <span className="text-[11px] font-medium text-ix-charcoal/50">
-                Local simulation
+                {transcript.status === "loading"
+                  ? "Loading transcript…"
+                  : isCompleted
+                    ? "Read-only transcript"
+                    : "Saved to your account"}
               </span>
             </div>
 
@@ -443,9 +580,31 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               className="mt-3 flex min-h-[220px] flex-1 flex-col gap-3 overflow-y-auto pr-1 sm:min-h-[260px] lg:min-h-0"
               aria-live="polite"
             >
+              {transcript.status === "loading" ? (
+                <p className="text-sm text-ix-charcoal/55">
+                  Loading saved conversation…
+                </p>
+              ) : null}
+              {transcript.status === "error" ? (
+                <div className="rounded-[1rem] border border-[#d8c2c2] bg-[#fbf5f5] px-3.5 py-3">
+                  <p className="text-sm text-red-800">{transcript.message}</p>
+                  <button
+                    type="button"
+                    className="mt-2 rounded-full bg-ix-graphite px-4 py-2 text-sm font-medium text-white"
+                    onClick={() => setRetryToken((value) => value + 1)}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : null}
+              {transcript.status === "ready" && messages.length === 0 ? (
+                <p className="text-sm text-ix-charcoal/55">
+                  No messages were saved for this session.
+                </p>
+              ) : null}
               {messages.map((message) => (
                 <div
-                  key={message.id}
+                  key={message.clientMessageId}
                   className={`max-w-[95%] rounded-[1rem] px-3.5 py-2.5 text-sm leading-relaxed ${
                     message.speaker === "interviewer"
                       ? "self-start border border-[#cfc9e8] bg-[#eef0fb] text-ix-charcoal"
@@ -458,6 +617,27 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                       : "You"}
                   </p>
                   <p className="mt-1">{message.text}</p>
+                  {message.status === "saving" ? (
+                    <p className="mt-1.5 text-[11px] text-ix-charcoal/50">
+                      Saving…
+                    </p>
+                  ) : null}
+                  {message.status === "failed" ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] text-red-800" role="alert">
+                        {message.error ?? "Save failed."}
+                      </p>
+                      <button
+                        type="button"
+                        className="rounded-full bg-ix-graphite px-3 py-1 text-[11px] font-medium text-white"
+                        onClick={() => {
+                          void retryFailedMessage(message);
+                        }}
+                      >
+                        Retry save
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -480,7 +660,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                     : "Type your response…"
                 }
                 className="ix-field min-h-[5.5rem] resize-y"
-                disabled={isCompleted || ending}
+                disabled={isCompleted || ending || transcriptBusy}
               />
               {draftError ? (
                 <p className="mt-1.5 text-sm text-red-800" role="alert">
@@ -491,12 +671,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 <button
                   type="submit"
                   className="ix-btn-primary !w-auto px-5 !py-2.5 text-sm"
-                  disabled={isCompleted || ending}
+                  disabled={isCompleted || ending || transcriptBusy}
                 >
-                  Send response
+                  {hasPendingSave(messages) ? "Saving…" : "Send response"}
                 </button>
                 <p className="text-[12px] text-ix-charcoal/50">
-                  Messages stay on this page only — no AI reply is generated.
+                  {isCompleted
+                    ? "Completed sessions are read-only."
+                    : "Answers are saved to the server. No AI reply is generated yet."}
                 </p>
               </div>
             </form>

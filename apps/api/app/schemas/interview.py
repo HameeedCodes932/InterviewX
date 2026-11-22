@@ -89,3 +89,40 @@ class InterviewSessionListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+MessageSpeaker = Literal["interviewer", "candidate"]
+
+MAX_MESSAGE_CONTENT_LENGTH = 8000
+
+
+class InterviewMessageCreate(BaseModel):
+    speaker: MessageSpeaker
+    content: str = Field(min_length=1, max_length=MAX_MESSAGE_CONTENT_LENGTH)
+    client_message_id: UUID
+
+    @field_validator("content")
+    @classmethod
+    def validate_content(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Message content cannot be empty.")
+        if len(cleaned) > MAX_MESSAGE_CONTENT_LENGTH:
+            raise ValueError("Message content is too long.")
+        return cleaned
+
+
+class InterviewMessageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    session_id: UUID
+    speaker: MessageSpeaker
+    content: str
+    sequence: int
+    client_message_id: UUID
+    created_at: datetime
+
+
+class InterviewMessageListResponse(BaseModel):
+    items: list[InterviewMessageResponse]

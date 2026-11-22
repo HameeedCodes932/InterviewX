@@ -17,7 +17,16 @@ import {
   messageForListInterviewSessionsError,
 } from "./listSessionError";
 import { buildListInterviewSessionsPath } from "./listSessionsPath";
+import {
+  mapCreateInterviewMessageErrorCode,
+  mapListInterviewMessagesErrorCode,
+  messageForCreateInterviewMessageError,
+  messageForListInterviewMessagesError,
+} from "./messageError";
 import type {
+  InterviewMessage,
+  InterviewMessageCreateRequest,
+  InterviewMessageListResponse,
   InterviewSession,
   InterviewSessionCreateRequest,
   InterviewSessionListResponse,
@@ -29,6 +38,10 @@ export type {
   DurationMinutes,
   ExperienceLevel,
   InterviewCategory,
+  InterviewMessage,
+  InterviewMessageCreateRequest,
+  InterviewMessageListResponse,
+  InterviewMessageSpeaker,
   InterviewSession,
   InterviewSessionCreateRequest,
   InterviewSessionListResponse,
@@ -73,6 +86,33 @@ export type {
   ReadyHistoryPage,
   RunHistoryLoadMoreDeps,
 } from "./historyLoadMore";
+export {
+  mapCreateInterviewMessageErrorCode,
+  mapListInterviewMessagesErrorCode,
+  messageForCreateInterviewMessageError,
+  messageForListInterviewMessagesError,
+} from "./messageError";
+export type {
+  CreateInterviewMessageErrorCode,
+  ListInterviewMessagesErrorCode,
+} from "./messageError";
+export {
+  greetingClientMessageId,
+  newClientMessageId,
+  stableClientMessageId,
+} from "./clientMessageId";
+export {
+  DEFAULT_INTERVIEW_GREETING,
+  beginOptimisticMessage,
+  canSubmitCandidateReply,
+  completeMessageSave,
+  failMessageSave,
+  hasPendingSave,
+  mapApiMessageToRoom,
+  markMessageSaving,
+  messagesFromApi,
+} from "./roomMessages";
+export type { RoomMessage, RoomMessageStatus } from "./roomMessages";
 
 export class InterviewApiError extends Error {
   code: string;
@@ -188,6 +228,57 @@ export async function completeInterviewSession(
     throw new InterviewApiError(
       code,
       messageForCompleteInterviewSessionError(code),
+    );
+  }
+}
+
+export async function listInterviewMessages(
+  sessionId: string,
+): Promise<InterviewMessageListResponse> {
+  try {
+    return await apiFetch<InterviewMessageListResponse>(
+      `/interviews/${sessionId}/messages`,
+      { method: "GET" },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const code = mapListInterviewMessagesErrorCode(error.status);
+      const message = messageForListInterviewMessagesError(
+        code,
+        detailMessage(error.body, "Unable to load the conversation."),
+      );
+      throw new InterviewApiError(code, message, error.status);
+    }
+    const code = mapListInterviewMessagesErrorCode(null);
+    throw new InterviewApiError(
+      code,
+      messageForListInterviewMessagesError(code),
+    );
+  }
+}
+
+export async function createInterviewMessage(
+  sessionId: string,
+  input: InterviewMessageCreateRequest,
+): Promise<InterviewMessage> {
+  try {
+    return await apiFetch<InterviewMessage>(
+      `/interviews/${sessionId}/messages`,
+      { method: "POST", body: input },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const code = mapCreateInterviewMessageErrorCode(error.status);
+      const message = messageForCreateInterviewMessageError(
+        code,
+        detailMessage(error.body, "Unable to save the message."),
+      );
+      throw new InterviewApiError(code, message, error.status);
+    }
+    const code = mapCreateInterviewMessageErrorCode(null);
+    throw new InterviewApiError(
+      code,
+      messageForCreateInterviewMessageError(code),
     );
   }
 }
