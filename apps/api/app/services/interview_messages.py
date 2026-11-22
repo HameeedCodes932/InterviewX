@@ -104,11 +104,13 @@ def create_owned_interview_message(
     session_id: UUID,
     payload: InterviewMessageCreate,
 ) -> InterviewMessage:
-    """Persist a message for an owned in-progress session.
+    """Persist a message for an owned session.
 
     Ownership is established (and the session row locked) before any
-    idempotency lookup or message payload is returned. Sequence numbers are
-    allocated under that lock so concurrent writers cannot collide.
+    idempotency lookup or message payload is returned. Already-persisted
+    ``client_message_id`` retries succeed even after the session is completed;
+    genuinely new writes to completed sessions are rejected. Sequence numbers
+    are allocated under that lock so concurrent writers cannot collide.
     """
     last_error: Exception | None = None
     for _ in range(_MAX_WRITE_ATTEMPTS):
@@ -120,13 +122,8 @@ def create_owned_interview_message(
                     "Interview session not found.",
                 )
 
-            if session.status == SESSION_STATUS_COMPLETED:
-                raise InterviewMessageError(
-                    "completed",
-                    "Cannot add messages to a completed interview session.",
-                )
-
             # Idempotency only after ownership is confirmed under the lock.
+            # Return an existing row even if the session has since completed.
             existing = _existing_by_client_id(
                 db,
                 session_id=session_id,
@@ -135,6 +132,12 @@ def create_owned_interview_message(
             if existing is not None:
                 db.commit()
                 return existing
+
+            if session.status == SESSION_STATUS_COMPLETED:
+                raise InterviewMessageError(
+                    "completed",
+                    "Cannot add messages to a completed interview session.",
+                )
 
             message = InterviewMessage(
                 session_id=session.id,

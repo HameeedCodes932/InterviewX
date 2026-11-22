@@ -272,6 +272,50 @@ def test_cannot_write_messages_to_completed_session(client) -> None:
     assert listed.json()["items"] == []
 
 
+def test_idempotent_retry_succeeds_after_session_completed(client) -> None:
+    """Already-persisted client_message_id retries must not 409 after complete."""
+    auth = _register(client, email="msg-idemp-completed@example.com")
+    created = _create_session(client, auth["access_token"])
+    headers = _auth_headers(auth["access_token"])
+    client_message_id = str(uuid4())
+    payload = _message_payload(
+        content="Answer before complete",
+        client_message_id=client_message_id,
+    )
+
+    first = client.post(
+        f"/api/v1/interviews/{created['id']}/messages",
+        json=payload,
+        headers=headers,
+    )
+    assert first.status_code == 201
+    message_id = first.json()["id"]
+
+    complete = client.post(
+        f"/api/v1/interviews/{created['id']}/complete",
+        headers=headers,
+    )
+    assert complete.status_code == 200
+    assert complete.json()["status"] == "completed"
+
+    retry = client.post(
+        f"/api/v1/interviews/{created['id']}/messages",
+        json=payload,
+        headers=headers,
+    )
+    assert retry.status_code == 201
+    assert retry.json()["id"] == message_id
+    assert retry.json()["client_message_id"] == client_message_id
+
+    # Genuinely new writes to a completed session remain blocked.
+    new_write = client.post(
+        f"/api/v1/interviews/{created['id']}/messages",
+        json=_message_payload(content="Should be rejected"),
+        headers=headers,
+    )
+    assert new_write.status_code == 409
+
+
 def test_existing_session_endpoints_still_work(client) -> None:
     auth = _register(client, email="msg-regression@example.com")
     headers = _auth_headers(auth["access_token"])
