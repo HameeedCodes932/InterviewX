@@ -175,8 +175,12 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   useEffect(() => {
     const el = transcriptRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    // Completed rooms are for reading history — keep the start visible.
+    // In-progress rooms keep chat-style stick-to-latest behavior.
+    const completed =
+      load.status === "ready" && load.session.status === "completed";
+    el.scrollTop = completed ? 0 : el.scrollHeight;
+  }, [messages, load]);
 
   useEffect(() => {
     function syncFullscreen() {
@@ -495,12 +499,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     <div
       ref={roomRef}
       className={`ix-dashboard-shell relative min-h-dvh ${
-        isFullscreen ? "h-dvh overflow-y-auto" : ""
+        isFullscreen
+          ? "h-dvh overflow-y-auto"
+          : "lg:h-dvh lg:overflow-hidden"
       }`}
       data-fullscreen-target="interview-room"
     >
-      <div className="mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col px-3 py-3 min-[375px]:px-4 sm:px-6 sm:py-4 lg:px-8 lg:py-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#bdb8ae]/80 pb-3">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col px-3 py-3 min-[375px]:px-4 sm:px-6 sm:py-4 lg:h-full lg:min-h-0 lg:overflow-hidden lg:px-8 lg:py-5">
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#bdb8ae]/80 pb-3">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/dashboard"
@@ -554,7 +560,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
 
         {isCompleted ? (
           <div
-            className="mt-3 rounded-ix-sm border border-ix-indigo/25 bg-[#f7f6fb] px-3.5 py-3 text-sm text-ix-charcoal/75"
+            className="mt-3 shrink-0 rounded-ix-sm border border-ix-indigo/25 bg-[#f7f6fb] px-3.5 py-3 text-sm text-ix-charcoal/75"
             role="status"
           >
             This interview session is already completed. Conversation controls
@@ -563,8 +569,8 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
           </div>
         ) : null}
 
-        <main className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:gap-5">
-          <section className="ix-room-stage flex min-h-0 flex-col">
+        <main className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-5 lg:overflow-hidden">
+          <section className="ix-room-stage flex h-full min-h-0 flex-col">
             <div className="relative overflow-hidden rounded-[1.15rem] bg-[#1c1e24]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -628,8 +634,8 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             </aside>
           </section>
 
-          <section className="ix-room-chat flex min-h-0 flex-col">
-            <div className="flex items-center justify-between gap-2 border-b border-[#cfcbc3] px-1 pb-2">
+          <section className="ix-room-chat flex h-full min-h-0 flex-col">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#cfcbc3] px-1 pb-2">
               <h2 className="font-display text-[1.15rem] tracking-tight text-ix-graphite">
                 Conversation
               </h2>
@@ -644,7 +650,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
 
             <div
               ref={transcriptRef}
-              className="mt-3 flex min-h-[220px] flex-1 flex-col gap-3 overflow-y-auto pr-1 sm:min-h-[260px] lg:min-h-0"
+              className="mt-3 flex min-h-[220px] flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-1 sm:min-h-[260px] lg:min-h-[min(40vh,24rem)]"
               aria-live="polite"
             >
               {transcript.status === "loading" ? (
@@ -709,13 +715,16 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               ))}
             </div>
 
-            <form className="mt-3 border-t border-[#cfcbc3] pt-3" onSubmit={submitMessage}>
+            <form
+              className="mt-3 shrink-0 border-t border-[#cfcbc3] pt-3"
+              onSubmit={submitMessage}
+            >
               <label htmlFor={inputId} className="sr-only">
                 Your response
               </label>
               <textarea
                 id={inputId}
-                rows={3}
+                rows={isCompleted ? 2 : 3}
                 value={draft}
                 onChange={(event) => {
                   setDraft(event.target.value);
@@ -726,7 +735,9 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                     ? "This session is completed."
                     : "Type your response…"
                 }
-                className="ix-field min-h-[5.5rem] resize-y"
+                className={`ix-field resize-y ${
+                  isCompleted ? "min-h-[3.25rem]" : "min-h-[5.5rem]"
+                }`}
                 disabled={isCompleted || ending || transcriptBusy}
               />
               {draftError ? (
@@ -750,7 +761,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               </div>
             </form>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#cfcbc3] pt-3">
+            <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2 border-t border-[#cfcbc3] pt-3">
               <button
                 type="button"
                 className={`rounded-full border px-3.5 py-2 text-sm font-medium transition ${
@@ -822,7 +833,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
           </section>
         </main>
 
-        <footer className="mt-4 shrink-0 border-t border-[#c9c5bc]/80 pt-3 text-center text-[11px] text-ix-charcoal/45 sm:text-left">
+        <footer className="mt-4 shrink-0 border-t border-[#c9c5bc]/80 pt-3 text-center text-[11px] text-ix-charcoal/45 lg:mt-3 sm:text-left">
           © {new Date().getFullYear()} InterviewX
         </footer>
       </div>
