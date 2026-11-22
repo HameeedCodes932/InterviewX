@@ -60,6 +60,14 @@ export {
   statusLabel,
 } from "./display";
 export { buildListInterviewSessionsPath } from "./listSessionsPath";
+export {
+  beginLoadMore,
+  canLoadMore,
+  completeLoadMoreFailure,
+  completeLoadMoreSuccess,
+  completeLoadMoreUnauthenticated,
+} from "./historyLoadMore";
+export type { ReadyHistoryPage } from "./historyLoadMore";
 
 export class InterviewApiError extends Error {
   code: string;

@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   InterviewApiError,
+  beginLoadMore,
+  completeLoadMoreFailure,
+  completeLoadMoreSuccess,
+  completeLoadMoreUnauthenticated,
   listInterviewSessions,
   type InterviewSession,
 } from "@/lib/interviews";
@@ -19,9 +23,15 @@ type LoadState =
       items: InterviewSession[];
       total: number;
       loadingMore: boolean;
+      loadMoreError: string | null;
     }
   | { status: "empty" }
   | { status: "error"; message: string };
+
+function loadMoreErrorMessage(error: unknown): string {
+  if (error instanceof InterviewApiError) return error.message;
+  return "Unable to load more interview sessions.";
+}
 
 export function InterviewHistory() {
   const router = useRouter();
@@ -49,6 +59,7 @@ export function InterviewHistory() {
           items: payload.items,
           total: payload.total,
           loadingMore: false,
+          loadMoreError: null,
         });
       })
       .catch((error: unknown) => {
@@ -75,35 +86,53 @@ export function InterviewHistory() {
   }, [retryToken, router]);
 
   async function loadMore() {
-    if (load.status !== "ready" || load.loadingMore) return;
-    if (load.items.length >= load.total) return;
+    let offset = 0;
+    let started = false;
 
-    setLoad({ ...load, loadingMore: true });
+    setLoad((prev) => {
+      if (prev.status !== "ready") return prev;
+      const next = beginLoadMore(prev);
+      if (!next) return prev;
+      started = true;
+      offset = next.items.length;
+      return { status: "ready", ...next };
+    });
+
+    if (!started) return;
+
     try {
       const payload = await listInterviewSessions({
         limit: PAGE_SIZE,
-        offset: load.items.length,
+        offset,
       });
-      setLoad({
-        status: "ready",
-        items: [...load.items, ...payload.items],
-        total: payload.total,
-        loadingMore: false,
+      setLoad((prev) => {
+        if (prev.status !== "ready") return prev;
+        return {
+          status: "ready",
+          ...completeLoadMoreSuccess(prev, payload),
+        };
       });
     } catch (error: unknown) {
       if (
         error instanceof InterviewApiError &&
         error.code === "unauthenticated"
       ) {
+        setLoad((prev) => {
+          if (prev.status !== "ready") return prev;
+          return {
+            status: "ready",
+            ...completeLoadMoreUnauthenticated(prev),
+          };
+        });
         router.replace("/login");
         return;
       }
-      setLoad({
-        status: "error",
-        message:
-          error instanceof InterviewApiError
-            ? error.message
-            : "Unable to load more interview sessions.",
+      setLoad((prev) => {
+        if (prev.status !== "ready") return prev;
+        return {
+          status: "ready",
+          ...completeLoadMoreFailure(prev, loadMoreErrorMessage(error)),
+        };
       });
     }
   }
@@ -168,7 +197,25 @@ export function InterviewHistory() {
             <SessionHistoryCard key={session.id} session={session} />
           ))}
           {load.items.length < load.total ? (
-            <div className="flex justify-center pt-2">
+            <div className="flex flex-col items-center gap-2 pt-2">
+              {load.loadMoreError ? (
+                <div
+                  className="w-full max-w-md rounded-[1.1rem] border border-[#d8c2c2] bg-[#fbf5f5] px-4 py-3 text-center"
+                  role="alert"
+                >
+                  <p className="text-sm text-red-800">{load.loadMoreError}</p>
+                  <button
+                    type="button"
+                    className="mt-2 rounded-full bg-ix-graphite px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                    onClick={() => {
+                      void loadMore();
+                    }}
+                    disabled={load.loadingMore}
+                  >
+                    {load.loadingMore ? "Loading…" : "Retry Load More"}
+                  </button>
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="rounded-full border border-[#b7b2a7] bg-[#ecebe7] px-5 py-2.5 text-sm font-medium text-ix-charcoal transition hover:bg-[#e3e2dd] disabled:opacity-60"
