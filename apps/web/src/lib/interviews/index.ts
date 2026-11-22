@@ -119,8 +119,10 @@ export {
 } from "./roomMessages";
 export type {
   CompletionBlockReason,
+  CompletionGuardInput,
   RoomMessage,
   RoomMessageStatus,
+  TranscriptLoadStatus,
 } from "./roomMessages";
 
 export class InterviewApiError extends Error {

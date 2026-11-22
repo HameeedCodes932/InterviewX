@@ -273,9 +273,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const duration = session.duration_minutes as DurationMinutes;
   const transcriptBusy =
     transcript.status === "loading" || hasPendingSave(messages);
+  const completionGuard = {
+    transcriptStatus: transcript.status,
+    messages,
+    sendInFlight: sendInFlight.current,
+  };
   const endBlockReason = isCompleted
     ? null
-    : completionBlockReason(messages);
+    : completionBlockReason(completionGuard);
   const endBlocked = endBlockReason !== null;
   const endBlockedMessage = messageForCompletionBlock(endBlockReason);
 
@@ -286,9 +291,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
       setConfirmExit(true);
       return;
     }
-    if (!canCompleteInterview(messages)) {
+    const guard = {
+      transcriptStatus: transcript.status,
+      messages,
+      sendInFlight: sendInFlight.current,
+    };
+    if (!canCompleteInterview(guard)) {
       setEndError(
-        messageForCompletionBlock(completionBlockReason(messages)) ??
+        messageForCompletionBlock(completionBlockReason(guard)) ??
           "Save all messages before ending the interview.",
       );
       setConfirmExit(true);
@@ -412,7 +422,12 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
       return;
     }
 
-    const block = completionBlockReason(messages);
+    const guard = {
+      transcriptStatus: transcript.status,
+      messages,
+      sendInFlight: sendInFlight.current,
+    };
+    const block = completionBlockReason(guard);
     if (block !== null) {
       setEndError(
         messageForCompletionBlock(block) ??
@@ -425,10 +440,15 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     setEndError(null);
     try {
       // Re-check immediately before the network call in case a save started.
-      if (!canCompleteInterview(messages)) {
+      const latestGuard = {
+        transcriptStatus: transcript.status,
+        messages,
+        sendInFlight: sendInFlight.current,
+      };
+      if (!canCompleteInterview(latestGuard)) {
         setEnding(false);
         setEndError(
-          messageForCompletionBlock(completionBlockReason(messages)) ??
+          messageForCompletionBlock(completionBlockReason(latestGuard)) ??
             "Save all messages before ending the interview.",
         );
         return;

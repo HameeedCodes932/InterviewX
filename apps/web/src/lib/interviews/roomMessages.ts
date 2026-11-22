@@ -18,6 +18,8 @@ export type RoomMessage = {
   error?: string;
 };
 
+export type TranscriptLoadStatus = "loading" | "ready" | "error";
+
 export function mapApiMessageToRoom(message: InterviewMessage): RoomMessage {
   return {
     id: message.id,
@@ -121,25 +123,47 @@ export function hasUnsavedMessages(messages: RoomMessage[]): boolean {
   return hasPendingSave(messages) || hasFailedSave(messages);
 }
 
-export type CompletionBlockReason = "saving" | "failed" | null;
+export type CompletionBlockReason =
+  | "transcript_loading"
+  | "transcript_error"
+  | "sending"
+  | "saving"
+  | "failed"
+  | null;
+
+export type CompletionGuardInput = {
+  transcriptStatus: TranscriptLoadStatus;
+  messages: RoomMessage[];
+  /** Synchronous in-flight send lock (ref.current). */
+  sendInFlight?: boolean;
+};
 
 /** Why ending an in-progress interview must wait (null = safe to complete). */
 export function completionBlockReason(
-  messages: RoomMessage[],
+  input: CompletionGuardInput,
 ): CompletionBlockReason {
-  if (hasPendingSave(messages)) return "saving";
-  if (hasFailedSave(messages)) return "failed";
+  if (input.transcriptStatus === "loading") return "transcript_loading";
+  if (input.transcriptStatus === "error") return "transcript_error";
+  if (input.sendInFlight) return "sending";
+  if (hasPendingSave(input.messages)) return "saving";
+  if (hasFailedSave(input.messages)) return "failed";
   return null;
 }
 
-export function canCompleteInterview(messages: RoomMessage[]): boolean {
-  return completionBlockReason(messages) === null;
+export function canCompleteInterview(input: CompletionGuardInput): boolean {
+  return completionBlockReason(input) === null;
 }
 
 export function messageForCompletionBlock(
   reason: CompletionBlockReason,
 ): string | null {
   switch (reason) {
+    case "transcript_loading":
+      return "Wait for the conversation to finish loading before ending the interview.";
+    case "transcript_error":
+      return "The conversation could not be loaded. Retry loading before ending the interview.";
+    case "sending":
+      return "Wait for the current message to finish saving before ending the interview.";
     case "saving":
       return "Wait for all messages to finish saving before ending the interview.";
     case "failed":

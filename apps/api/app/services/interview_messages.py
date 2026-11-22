@@ -106,18 +106,10 @@ def create_owned_interview_message(
 ) -> InterviewMessage:
     """Persist a message for an owned in-progress session.
 
-    Idempotent on ``client_message_id``. Sequence numbers are allocated while
-    holding a row lock on the parent ``interview_sessions`` row so concurrent
-    writers for the same session cannot claim the same sequence.
+    Ownership is established (and the session row locked) before any
+    idempotency lookup or message payload is returned. Sequence numbers are
+    allocated under that lock so concurrent writers cannot collide.
     """
-    existing = _existing_by_client_id(
-        db,
-        session_id=session_id,
-        client_message_id=payload.client_message_id,
-    )
-    if existing is not None:
-        return existing
-
     last_error: Exception | None = None
     for _ in range(_MAX_WRITE_ATTEMPTS):
         try:
@@ -134,6 +126,7 @@ def create_owned_interview_message(
                     "Cannot add messages to a completed interview session.",
                 )
 
+            # Idempotency only after ownership is confirmed under the lock.
             existing = _existing_by_client_id(
                 db,
                 session_id=session_id,
@@ -160,13 +153,22 @@ def create_owned_interview_message(
         except IntegrityError as exc:
             db.rollback()
             last_error = exc
+            # Re-establish ownership before returning any raced row.
+            session = _lock_owned_session(db, user=user, session_id=session_id)
+            if session is None:
+                raise InterviewMessageError(
+                    "not_found",
+                    "Interview session not found.",
+                ) from exc
             raced = _existing_by_client_id(
                 db,
                 session_id=session_id,
                 client_message_id=payload.client_message_id,
             )
             if raced is not None:
+                db.commit()
                 return raced
+            db.rollback()
             # Sequence unique violation under rare timing — retry with a fresh lock.
             continue
 

@@ -148,17 +148,96 @@ assert.equal(
   true,
 );
 
-// Completion must wait for pending / failed saves.
-assert.equal(canCompleteInterview(ordered), true);
-assert.equal(completionBlockReason(ordered), null);
+// Completion must wait for transcript readiness, in-flight send, and saves.
+const readyGuard = {
+  transcriptStatus: "ready" as const,
+  messages: ordered,
+  sendInFlight: false,
+};
+assert.equal(canCompleteInterview(readyGuard), true);
+assert.equal(completionBlockReason(readyGuard), null);
+
+assert.equal(
+  completionBlockReason({
+    transcriptStatus: "loading",
+    messages: ordered,
+    sendInFlight: false,
+  }),
+  "transcript_loading",
+);
+assert.equal(
+  canCompleteInterview({
+    transcriptStatus: "loading",
+    messages: ordered,
+  }),
+  false,
+);
+assert.match(
+  messageForCompletionBlock("transcript_loading") ?? "",
+  /finish loading/i,
+);
+
+assert.equal(
+  completionBlockReason({
+    transcriptStatus: "error",
+    messages: ordered,
+    sendInFlight: false,
+  }),
+  "transcript_error",
+);
+assert.equal(
+  canCompleteInterview({
+    transcriptStatus: "error",
+    messages: ordered,
+  }),
+  false,
+);
+assert.match(
+  messageForCompletionBlock("transcript_error") ?? "",
+  /could not be loaded/i,
+);
+
+assert.equal(
+  completionBlockReason({
+    transcriptStatus: "ready",
+    messages: ordered,
+    sendInFlight: true,
+  }),
+  "sending",
+);
+assert.equal(
+  canCompleteInterview({
+    transcriptStatus: "ready",
+    messages: ordered,
+    sendInFlight: true,
+  }),
+  false,
+);
+assert.match(
+  messageForCompletionBlock("sending") ?? "",
+  /current message to finish saving/i,
+);
 
 const savingOnly = beginOptimisticMessage(ordered, {
   clientMessageId: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
   speaker: "candidate",
   text: "Still saving",
 });
-assert.equal(completionBlockReason(savingOnly), "saving");
-assert.equal(canCompleteInterview(savingOnly), false);
+assert.equal(
+  completionBlockReason({
+    transcriptStatus: "ready",
+    messages: savingOnly,
+    sendInFlight: false,
+  }),
+  "saving",
+);
+assert.equal(
+  canCompleteInterview({
+    transcriptStatus: "ready",
+    messages: savingOnly,
+  }),
+  false,
+);
 assert.equal(hasUnsavedMessages(savingOnly), true);
 assert.match(
   messageForCompletionBlock("saving") ?? "",
@@ -170,12 +249,34 @@ const failedOnly = failMessageSave(
   "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
   "Network down",
 );
-assert.equal(completionBlockReason(failedOnly), "failed");
+assert.equal(
+  completionBlockReason({
+    transcriptStatus: "ready",
+    messages: failedOnly,
+  }),
+  "failed",
+);
 assert.equal(hasFailedSave(failedOnly), true);
-assert.equal(canCompleteInterview(failedOnly), false);
+assert.equal(
+  canCompleteInterview({
+    transcriptStatus: "ready",
+    messages: failedOnly,
+  }),
+  false,
+);
 assert.match(
   messageForCompletionBlock("failed") ?? "",
   /failed to save/i,
+);
+
+// Transcript loading takes precedence over save failures.
+assert.equal(
+  completionBlockReason({
+    transcriptStatus: "loading",
+    messages: failedOnly,
+    sendInFlight: true,
+  }),
+  "transcript_loading",
 );
 
 const recovered = completeMessageSave(failedOnly, {
@@ -187,7 +288,20 @@ const recovered = completeMessageSave(failedOnly, {
   client_message_id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
   created_at: "2026-11-23T10:00:03.000Z",
 });
-assert.equal(canCompleteInterview(recovered), true);
-assert.equal(completionBlockReason(recovered), null);
+assert.equal(
+  canCompleteInterview({
+    transcriptStatus: "ready",
+    messages: recovered,
+    sendInFlight: false,
+  }),
+  true,
+);
+assert.equal(
+  completionBlockReason({
+    transcriptStatus: "ready",
+    messages: recovered,
+  }),
+  null,
+);
 
 console.log("room-messages.test.mts: ok");

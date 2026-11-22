@@ -67,6 +67,45 @@ def test_other_user_cannot_list_or_create_messages(client) -> None:
     assert created_msg.status_code == 404
 
 
+def test_foreign_user_cannot_fetch_existing_message_via_client_id(client) -> None:
+    """Ownership must be checked before idempotent client_message_id lookup."""
+    owner = _register(client, email="msg-idemp-owner@example.com")
+    other = _register(client, email="msg-idemp-other@example.com")
+    created = _create_session(client, owner["access_token"])
+    client_message_id = str(uuid4())
+    payload = _message_payload(
+        speaker="candidate",
+        content="Owner-only answer",
+        client_message_id=client_message_id,
+    )
+
+    owned = client.post(
+        f"/api/v1/interviews/{created['id']}/messages",
+        json=payload,
+        headers=_auth_headers(owner["access_token"]),
+    )
+    assert owned.status_code == 201
+    owned_id = owned.json()["id"]
+
+    # Same session + client_message_id from a foreign user must not return the row.
+    leaked = client.post(
+        f"/api/v1/interviews/{created['id']}/messages",
+        json=payload,
+        headers=_auth_headers(other["access_token"]),
+    )
+    assert leaked.status_code == 404
+    assert "id" not in leaked.json() or leaked.json().get("id") != owned_id
+
+    # Owner retry remains idempotent.
+    retry = client.post(
+        f"/api/v1/interviews/{created['id']}/messages",
+        json=payload,
+        headers=_auth_headers(owner["access_token"]),
+    )
+    assert retry.status_code == 201
+    assert retry.json()["id"] == owned_id
+
+
 def test_missing_session_returns_404_for_messages(client) -> None:
     auth = _register(client, email="msg-missing@example.com")
     missing = uuid4()
