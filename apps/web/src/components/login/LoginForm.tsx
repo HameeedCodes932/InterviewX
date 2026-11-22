@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useId, useState, useSyncExternalStore } from "react";
-import { AuthError, consumeNextPath, loginAccount } from "@/lib/auth";
+import {
+  AuthError,
+  consumeNextPath,
+  loginAccount,
+  validateLoginPassword,
+} from "@/lib/auth";
 
 const REMEMBER_KEY = "interviewx.login.rememberEmail";
 
@@ -63,11 +68,9 @@ export function LoginForm() {
       setEmailError(null);
     }
 
-    if (!password) {
-      setPasswordError("Password is required.");
-      ok = false;
-    } else if (password.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
+    const passwordIssue = validateLoginPassword(password);
+    if (passwordIssue) {
+      setPasswordError(passwordIssue);
       ok = false;
     } else {
       setPasswordError(null);

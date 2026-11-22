@@ -9,6 +9,7 @@
  * for stronger production hardening.
  */
 
+import { invalidateSessionVerification } from "./sessionCache";
 import type { AuthSession, AuthUser } from "./types";
 
 export const ACCESS_TOKEN_KEY = "interviewx.auth.accessToken";
@@ -77,13 +78,24 @@ export function readUser(): AuthUser | null {
 
 export function writeSession(session: AuthSession | null) {
   if (typeof window === "undefined") return;
+  const previousToken = (() => {
+    try {
+      return localStorage.getItem(ACCESS_TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  })();
   try {
     if (session) {
       localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken);
       localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+      if (previousToken !== session.accessToken) {
+        invalidateSessionVerification();
+      }
     } else {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
+      invalidateSessionVerification();
     }
   } catch {
     /* ignore */

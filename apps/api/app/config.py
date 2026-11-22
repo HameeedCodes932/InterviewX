@@ -1,9 +1,23 @@
 """Application settings loaded from environment variables."""
 
-from functools import lru_cache
+from __future__ import annotations
 
-from pydantic import Field
+from functools import lru_cache
+from typing import Self
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+JWT_PLACEHOLDER_SECRETS = frozenset(
+    {
+        "CHANGE_ME_TO_A_LONG_RANDOM_SECRET",
+        "CHANGE_ME",
+        "changeme",
+        "secret",
+        "jwt-secret",
+    }
+)
+JWT_MIN_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -11,6 +25,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     app_name: str = Field(default="InterviewX API", alias="APP_NAME")
@@ -37,6 +52,37 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def validate_security_settings(self) -> Self:
+        if self.access_token_expire_minutes <= 0:
+            raise ValueError(
+                "ACCESS_TOKEN_EXPIRE_MINUTES must be a positive integer.",
+            )
+
+        secret = self.jwt_secret_key.strip()
+        if len(secret) < JWT_MIN_SECRET_LENGTH:
+            raise ValueError(
+                f"JWT_SECRET_KEY must be at least {JWT_MIN_SECRET_LENGTH} characters. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(48))\"",
+            )
+
+        lowered = secret.lower()
+        is_placeholder = (
+            secret in JWT_PLACEHOLDER_SECRETS
+            or lowered in JWT_PLACEHOLDER_SECRETS
+            or lowered.startswith("change_me")
+            or "change_me" in lowered
+        )
+        if is_placeholder and self.app_env.lower() != "test":
+            raise ValueError(
+                "JWT_SECRET_KEY must not use a placeholder value outside the test "
+                "environment. Generate a strong secret with: "
+                'python -c "import secrets; print(secrets.token_urlsafe(48))"',
+            )
+
+        object.__setattr__(self, "jwt_secret_key", secret)
+        return self
 
 
 @lru_cache

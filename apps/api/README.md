@@ -133,12 +133,20 @@ The Next.js app reads `NEXT_PUBLIC_API_BASE_URL` (default `http://127.0.0.1:8000
 Required auth env vars (see `.env.example`):
 
 ```env
-JWT_SECRET_KEY=CHANGE_ME_TO_A_LONG_RANDOM_SECRET
+JWT_SECRET_KEY=<at least 32 characters; not a placeholder>
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
 ```
 
-Passwords are hashed with **bcrypt**. Access tokens are **HS256 JWTs**. Never store plaintext passwords.
+Generate a strong JWT secret:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+The API refuses to start when `JWT_SECRET_KEY` is a placeholder or shorter than 32 characters (except `APP_ENV=test`), or when `ACCESS_TOKEN_EXPIRE_MINUTES` is not positive.
+
+Passwords are hashed with **bcrypt** and rejected when they exceed **72 UTF-8 bytes** (no silent truncation). Access tokens are **HS256 JWTs**. Never store plaintext passwords.
 
 ## Run tests
 

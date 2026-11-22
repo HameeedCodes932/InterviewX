@@ -8,13 +8,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.core.password_policy import validate_password_byte_length
+
 PASSWORD_PATTERN = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$")
 
 
 class RegisterRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=120)
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    # Character max_length omitted: enforce bcrypt's UTF-8 byte limit instead.
+    password: str = Field(min_length=8)
 
     @field_validator("full_name")
     @classmethod
@@ -31,7 +34,8 @@ class RegisterRequest(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def validate_password_strength(cls, value: str) -> str:
+    def validate_password(cls, value: str) -> str:
+        validate_password_byte_length(value)
         if not PASSWORD_PATTERN.match(value):
             raise ValueError(
                 "Password must be at least 8 characters and include uppercase, "
@@ -42,12 +46,17 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=1, max_length=128)
+    password: str = Field(min_length=1)
 
     @field_validator("email")
     @classmethod
     def normalize_email(cls, value: EmailStr) -> str:
         return str(value).strip().lower()
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_byte_length(value)
 
 
 class UserPublic(BaseModel):

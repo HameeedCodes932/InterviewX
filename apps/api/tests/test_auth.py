@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
+
+import jwt
+
+from app.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 
 
@@ -134,3 +140,24 @@ def test_jwt_payload_contains_subject(client) -> None:
     )
     assert response.status_code == 200
     assert response.json()["id"] == user_id
+
+
+def test_expired_jwt_rejected(client) -> None:
+    settings = get_settings()
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "sub": str(uuid4()),
+            "email": "expired@example.com",
+            "iat": now - timedelta(hours=2),
+            "exp": now - timedelta(hours=1),
+            "type": "access",
+        },
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 401

@@ -1,6 +1,5 @@
 /**
  * Frontend authentication against the InterviewX API.
- * Replaces temporary browser-only demo authentication.
  */
 
 import { ApiError, apiFetch } from "@/lib/api";
@@ -11,6 +10,13 @@ import {
   subscribeAuth,
   writeSession,
 } from "./storage";
+import {
+  AuthError,
+  ensureSessionVerified,
+  invalidateSessionVerification,
+  isSessionVerified,
+  markSessionVerified,
+} from "./sessionVerify";
 import type { AuthSession, AuthTokenResponse, AuthUser } from "./types";
 
 export type { AuthSession, AuthUser };
@@ -20,18 +26,22 @@ export {
   rememberNextPath,
   subscribeAuth,
 };
-
-export class AuthError extends Error {
-  code: string;
-  status?: number;
-
-  constructor(code: string, message: string, status?: number) {
-    super(message);
-    this.name = "AuthError";
-    this.code = code;
-    this.status = status;
-  }
-}
+export {
+  AuthError,
+  ensureSessionVerified,
+  invalidateSessionVerification,
+  isSessionVerified,
+  markSessionVerified,
+};
+export {
+  BCRYPT_MAX_PASSWORD_BYTES,
+  PASSWORD_TOO_LONG_MESSAGE,
+  isPasswordWithinBcryptLimit,
+  meetsPasswordRequirements,
+  passwordUtf8ByteLength,
+  validateLoginPassword,
+  validatePasswordForSubmit,
+} from "./password";
 
 function detailMessage(body: unknown, fallback: string) {
   if (body && typeof body === "object" && "detail" in body) {
@@ -65,6 +75,7 @@ export async function registerAccount(input: {
     });
     const session = toSession(payload);
     writeSession(session);
+    markSessionVerified(session.accessToken);
     return session;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -102,6 +113,7 @@ export async function loginAccount(input: {
     });
     const session = toSession(payload);
     writeSession(session);
+    markSessionVerified(session.accessToken);
     return session;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -119,31 +131,11 @@ export async function loginAccount(input: {
 }
 
 export async function fetchCurrentUser(): Promise<AuthUser> {
-  const session = getSessionSnapshot();
-  if (!session) {
-    throw new AuthError("unauthenticated", "Not authenticated.");
-  }
-  try {
-    const user = await apiFetch<AuthUser>("/auth/me", {
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-    });
-    writeSession({ accessToken: session.accessToken, user });
-    return user;
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      writeSession(null);
-      throw new AuthError("unauthenticated", "Session expired. Please sign in again.", 401);
-    }
-    throw new AuthError(
-      "network",
-      "Unable to verify your session with the API.",
-    );
-  }
+  return ensureSessionVerified();
 }
 
 export function logout() {
+  invalidateSessionVerification();
   writeSession(null);
 }
 

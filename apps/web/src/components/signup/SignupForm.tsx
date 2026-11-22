@@ -3,22 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useId, useState } from "react";
-import { AuthError, registerAccount } from "@/lib/auth";
+import {
+  AuthError,
+  registerAccount,
+  validatePasswordForSubmit,
+} from "@/lib/auth";
 
 const PASSWORD_HINT =
-  "Use at least 8 characters, including one uppercase letter, one lowercase letter, and one number.";
+  "Use at least 8 characters, including one uppercase letter, one lowercase letter, and one number. Max 72 UTF-8 bytes.";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function meetsPasswordRequirements(value: string) {
-  return (
-    value.length >= 8 &&
-    /[A-Z]/.test(value) &&
-    /[a-z]/.test(value) &&
-    /\d/.test(value)
-  );
 }
 
 export function SignupForm() {
@@ -73,13 +68,9 @@ export function SignupForm() {
       setEmailError(null);
     }
 
-    if (!password) {
-      setPasswordError("Password is required.");
-      ok = false;
-    } else if (!meetsPasswordRequirements(password)) {
-      setPasswordError(
-        "Password must be at least 8 characters and include uppercase, lowercase, and a number.",
-      );
+    const passwordIssue = validatePasswordForSubmit(password);
+    if (passwordIssue) {
+      setPasswordError(passwordIssue);
       ok = false;
     } else {
       setPasswordError(null);
