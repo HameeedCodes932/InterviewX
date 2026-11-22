@@ -12,7 +12,7 @@ from app.models.interview_session import InterviewSession
 from app.models.user import User
 from app.schemas.interview import InterviewSessionCreate
 
-SESSION_STATUS_CREATED = "created"
+SESSION_STATUS_IN_PROGRESS = "in_progress"
 SESSION_STATUS_COMPLETED = "completed"
 
 
@@ -30,7 +30,8 @@ def create_interview_session(
         focus_areas=list(payload.focus_areas),
         difficulty=payload.difficulty,
         duration_minutes=payload.duration_minutes,
-        status=SESSION_STATUS_CREATED,
+        # Start Interview creates the session and enters the room immediately.
+        status=SESSION_STATUS_IN_PROGRESS,
         completed_at=None,
     )
     db.add(session)

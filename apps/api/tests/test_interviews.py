@@ -52,7 +52,8 @@ def test_authenticated_can_create_valid_session(client, db_session) -> None:
     assert payload["focus_areas"] == VALID_PAYLOAD["focus_areas"]
     assert payload["difficulty"] == "medium"
     assert payload["duration_minutes"] == 30
-    assert payload["status"] == "created"
+    assert payload["status"] == "in_progress"
+    assert payload["completed_at"] is None
     assert "id" in payload
 
     from app.models.interview_session import InterviewSession
@@ -198,6 +199,9 @@ def _create_session(client, token: str) -> dict:
 def test_owner_can_complete_own_session(client, db_session) -> None:
     auth = _register(client, email="complete-owner@example.com")
     created = _create_session(client, auth["access_token"])
+    assert created["status"] == "in_progress"
+    assert created["completed_at"] is None
+
     response = client.post(
         f"/api/v1/interviews/{created['id']}/complete",
         headers=_auth_headers(auth["access_token"]),
@@ -247,6 +251,8 @@ def test_complete_nonexistent_session_returns_404(client) -> None:
 def test_complete_is_idempotent_and_preserves_timestamp(client) -> None:
     auth = _register(client, email="complete-idempotent@example.com")
     created = _create_session(client, auth["access_token"])
+    assert created["status"] == "in_progress"
+
     first = client.post(
         f"/api/v1/interviews/{created['id']}/complete",
         headers=_auth_headers(auth["access_token"]),

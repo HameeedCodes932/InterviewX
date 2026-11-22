@@ -12,7 +12,7 @@ export type InterviewSessionCreateRequest = {
   duration_minutes: DurationMinutes;
 };
 
-export type InterviewSessionStatus = "created" | "completed" | string;
+export type InterviewSessionStatus = "in_progress" | "completed" | string;
 
 export type InterviewSession = {
   id: string;

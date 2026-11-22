@@ -183,14 +183,14 @@ Example create response (truncated):
   "focus_areas": ["Programming & Problem Solving", "System Design"],
   "difficulty": "medium",
   "duration_minutes": 30,
-  "status": "created",
+  "status": "in_progress",
   "completed_at": null,
   "created_at": "2026-11-22T18:00:00Z",
   "updated_at": "2026-11-22T18:00:00Z"
 }
 ```
 
-Completing a session sets `status` to `completed` and records `completed_at`. Repeating the complete call is safe and preserves the original `completed_at`.
+New sessions start as `in_progress` (Start Interview creates the session and opens the room immediately). Completing a session sets `status` to `completed` and records `completed_at`. Repeating the complete call is safe and preserves the original `completed_at`.
 
 ## Run tests
 
