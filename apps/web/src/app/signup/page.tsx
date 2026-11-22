@@ -16,7 +16,7 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Desktop: page scrolls so the full form stays visible */}
+            {/* Desktop: split layout — page scrolls so the full form stays visible */}
             <div className="hidden grid-cols-[0.95fr_1.05fr] items-start gap-7 lg:grid xl:gap-9">
               <section className="lg:sticky lg:top-8 lg:self-start">
                 <div className="h-[min(72vh,640px)]">
