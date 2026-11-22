@@ -12,6 +12,8 @@ export type InterviewSessionCreateRequest = {
   duration_minutes: DurationMinutes;
 };
 
+export type InterviewSessionStatus = "in_progress" | "completed" | string;
+
 export type InterviewSession = {
   id: string;
   user_id: string;
@@ -21,7 +23,8 @@ export type InterviewSession = {
   focus_areas: string[];
   difficulty: Difficulty;
   duration_minutes: DurationMinutes;
-  status: string;
+  status: InterviewSessionStatus;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 };

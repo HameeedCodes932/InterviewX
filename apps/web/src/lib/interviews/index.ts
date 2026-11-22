@@ -5,6 +5,10 @@
 
 import { ApiError, apiFetch } from "@/lib/api";
 import {
+  mapCompleteInterviewSessionErrorCode,
+  messageForCompleteInterviewSessionError,
+} from "./completeSessionError";
+import {
   mapGetInterviewSessionErrorCode,
   messageForGetInterviewSessionError,
 } from "./getSessionError";
@@ -20,6 +24,7 @@ export type {
   InterviewCategory,
   InterviewSession,
   InterviewSessionCreateRequest,
+  InterviewSessionStatus,
 } from "./types";
 
 export {
@@ -27,6 +32,11 @@ export {
   messageForGetInterviewSessionError,
 } from "./getSessionError";
 export type { GetInterviewSessionErrorCode } from "./getSessionError";
+export {
+  mapCompleteInterviewSessionErrorCode,
+  messageForCompleteInterviewSessionError,
+} from "./completeSessionError";
+export type { CompleteInterviewSessionErrorCode } from "./completeSessionError";
 
 export class InterviewApiError extends Error {
   code: string;
@@ -90,6 +100,31 @@ export async function getInterviewSession(
     throw new InterviewApiError(
       code,
       messageForGetInterviewSessionError(code),
+    );
+  }
+}
+
+export async function completeInterviewSession(
+  sessionId: string,
+): Promise<InterviewSession> {
+  try {
+    return await apiFetch<InterviewSession>(
+      `/interviews/${sessionId}/complete`,
+      { method: "POST" },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const code = mapCompleteInterviewSessionErrorCode(error.status);
+      const message = messageForCompleteInterviewSessionError(
+        code,
+        detailMessage(error.body, "Unable to complete the interview session."),
+      );
+      throw new InterviewApiError(code, message, error.status);
+    }
+    const code = mapCompleteInterviewSessionErrorCode(null);
+    throw new InterviewApiError(
+      code,
+      messageForCompleteInterviewSessionError(code),
     );
   }
 }

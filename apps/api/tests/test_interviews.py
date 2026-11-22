@@ -52,7 +52,8 @@ def test_authenticated_can_create_valid_session(client, db_session) -> None:
     assert payload["focus_areas"] == VALID_PAYLOAD["focus_areas"]
     assert payload["difficulty"] == "medium"
     assert payload["duration_minutes"] == 30
-    assert payload["status"] == "created"
+    assert payload["status"] == "in_progress"
+    assert payload["completed_at"] is None
     assert "id" in payload
 
     from app.models.interview_session import InterviewSession
@@ -183,3 +184,90 @@ def test_invalid_duration_rejected(client) -> None:
         headers=_auth_headers(auth["access_token"]),
     )
     assert response.status_code == 422
+
+
+def _create_session(client, token: str) -> dict:
+    response = client.post(
+        "/api/v1/interviews",
+        json=VALID_PAYLOAD,
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_owner_can_complete_own_session(client, db_session) -> None:
+    auth = _register(client, email="complete-owner@example.com")
+    created = _create_session(client, auth["access_token"])
+    assert created["status"] == "in_progress"
+    assert created["completed_at"] is None
+
+    response = client.post(
+        f"/api/v1/interviews/{created['id']}/complete",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "completed"
+    assert payload["completed_at"] is not None
+
+    from uuid import UUID
+
+    from app.models.interview_session import InterviewSession
+
+    stored = db_session.get(InterviewSession, UUID(payload["id"]))
+    assert stored is not None
+    assert stored.status == "completed"
+    assert stored.completed_at is not None
+
+
+def test_unauthenticated_cannot_complete_session(client) -> None:
+    auth = _register(client, email="complete-unauth@example.com")
+    created = _create_session(client, auth["access_token"])
+    response = client.post(f"/api/v1/interviews/{created['id']}/complete")
+    assert response.status_code == 401
+
+
+def test_other_user_cannot_complete_foreign_session(client) -> None:
+    owner = _register(client, email="complete-owner2@example.com")
+    other = _register(client, email="complete-other@example.com")
+    created = _create_session(client, owner["access_token"])
+    response = client.post(
+        f"/api/v1/interviews/{created['id']}/complete",
+        headers=_auth_headers(other["access_token"]),
+    )
+    assert response.status_code == 404
+
+
+def test_complete_nonexistent_session_returns_404(client) -> None:
+    auth = _register(client, email="complete-missing@example.com")
+    response = client.post(
+        f"/api/v1/interviews/{uuid4()}/complete",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert response.status_code == 404
+
+
+def test_complete_is_idempotent_and_preserves_timestamp(client) -> None:
+    auth = _register(client, email="complete-idempotent@example.com")
+    created = _create_session(client, auth["access_token"])
+    assert created["status"] == "in_progress"
+
+    first = client.post(
+        f"/api/v1/interviews/{created['id']}/complete",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert first.status_code == 200
+    first_payload = first.json()
+    assert first_payload["status"] == "completed"
+    first_completed_at = first_payload["completed_at"]
+    assert first_completed_at is not None
+
+    second = client.post(
+        f"/api/v1/interviews/{created['id']}/complete",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert second.status_code == 200
+    second_payload = second.json()
+    assert second_payload["status"] == "completed"
+    assert second_payload["completed_at"] == first_completed_at

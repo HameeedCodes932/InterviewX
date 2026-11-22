@@ -33,7 +33,11 @@ class InterviewSession(Base):
     focus_areas: Mapped[list[Any]] = mapped_column(JSONB, nullable=False)
     difficulty: Mapped[str] = mapped_column(String(32), nullable=False)
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="created")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="in_progress")
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

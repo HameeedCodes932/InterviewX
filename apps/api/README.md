@@ -156,6 +156,7 @@ Both require `Authorization: Bearer <access_token>`. Ownership is always taken f
 | ------ | ---- | ----------- |
 | `POST` | `/api/v1/interviews` | Create a persisted interview session (201) |
 | `GET` | `/api/v1/interviews/{session_id}` | Fetch own session (404 if missing or not owned) |
+| `POST` | `/api/v1/interviews/{session_id}/complete` | Mark own session completed (idempotent) |
 
 Example create request:
 
@@ -182,11 +183,14 @@ Example create response (truncated):
   "focus_areas": ["Programming & Problem Solving", "System Design"],
   "difficulty": "medium",
   "duration_minutes": 30,
-  "status": "created",
+  "status": "in_progress",
+  "completed_at": null,
   "created_at": "2026-11-22T18:00:00Z",
   "updated_at": "2026-11-22T18:00:00Z"
 }
 ```
+
+New sessions start as `in_progress` (Start Interview creates the session and opens the room immediately). Completing a session sets `status` to `completed` and records `completed_at`. Repeating the complete call is safe and preserves the original `completed_at`.
 
 ## Run tests
 
