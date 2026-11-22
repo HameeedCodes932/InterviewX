@@ -8,15 +8,23 @@ import {
   useId,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { LogoMark } from "@/components/dashboard/LogoMark";
+import {
+  InterviewApiError,
+  getInterviewSession,
+  type InterviewSession,
+} from "@/lib/interviews";
 import {
   difficultyLabel,
   durationLabel,
   experienceLabel,
-  readSessionConfig,
 } from "./sessionConfig";
+import type {
+  DifficultyId,
+  DurationMinutes,
+  ExperienceLevelId,
+} from "./setupOptions";
 
 type ChatMessage = {
   id: string;
@@ -27,19 +35,26 @@ type ChatMessage = {
 const GREETING =
   "Hello! Welcome to your Software Engineering interview. Let's start by getting to know you. Could you briefly introduce yourself and tell me about your technical background?";
 
-function subscribeSessionConfig(onStoreChange: () => void) {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener("storage", onStoreChange);
-  return () => window.removeEventListener("storage", onStoreChange);
-}
+type InterviewRoomProps = {
+  sessionId: string;
+};
 
-export function InterviewRoom() {
+type LoadState =
+  | { status: "loading" }
+  | { status: "ready"; session: InterviewSession }
+  | { status: "not_found"; message: string }
+  | { status: "network"; message: string };
+
+export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const router = useRouter();
-  const config = useSyncExternalStore(
-    subscribeSessionConfig,
-    readSessionConfig,
-    () => null,
-  );
+  const [load, setLoad] = useState<LoadState>({ status: "loading" });
+  const [retryToken, setRetryToken] = useState(0);
+  const [trackedKey, setTrackedKey] = useState(`${sessionId}:0`);
+  const requestKey = `${sessionId}:${retryToken}`;
+  if (requestKey !== trackedKey) {
+    setTrackedKey(requestKey);
+    setLoad({ status: "loading" });
+  }
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: "greeting", speaker: "interviewer", text: GREETING },
   ]);
@@ -53,6 +68,43 @@ export function InterviewRoom() {
   const transcriptRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getInterviewSession(sessionId)
+      .then((session) => {
+        if (!cancelled) setLoad({ status: "ready", session });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        if (error instanceof InterviewApiError && error.code === "not_found") {
+          setLoad({
+            status: "not_found",
+            message: error.message,
+          });
+          return;
+        }
+        if (
+          error instanceof InterviewApiError &&
+          error.code === "unauthenticated"
+        ) {
+          router.replace("/login");
+          return;
+        }
+        setLoad({
+          status: "network",
+          message:
+            error instanceof InterviewApiError
+              ? error.message
+              : "Unable to load the interview session.",
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, retryToken, router]);
 
   useEffect(() => {
     const el = transcriptRef.current;
@@ -78,19 +130,26 @@ export function InterviewRoom() {
     };
   }, []);
 
-  if (!config) {
+  if (load.status === "loading") {
+    return (
+      <div className="ix-dashboard-shell flex min-h-dvh items-center justify-center px-4">
+        <p className="text-sm text-ix-charcoal/55">Loading interview session…</p>
+      </div>
+    );
+  }
+
+  if (load.status === "not_found") {
     return (
       <div className="ix-dashboard-shell relative min-h-dvh">
         <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-4 py-10">
           <div className="ix-setup-panel text-center">
             <LogoMark className="mx-auto h-10 w-10" />
             <h1 className="mt-4 font-display text-2xl tracking-tight text-ix-graphite">
-              Interview configuration missing
+              Interview session not found
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-ix-charcoal/65">
-              This room needs a Software Engineering setup before a practice
-              session can begin. Return to Interview Setup to choose your role,
-              focus, and duration.
+              {load.message} Return to Interview Setup to create a new practice
+              session.
             </p>
             <Link
               href="/interview/setup"
@@ -109,6 +168,42 @@ export function InterviewRoom() {
       </div>
     );
   }
+
+  if (load.status === "network") {
+    return (
+      <div className="ix-dashboard-shell relative min-h-dvh">
+        <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-4 py-10">
+          <div className="ix-setup-panel text-center">
+            <LogoMark className="mx-auto h-10 w-10" />
+            <h1 className="mt-4 font-display text-2xl tracking-tight text-ix-graphite">
+              Unable to load session
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-ix-charcoal/65">
+              {load.message}
+            </p>
+            <button
+              type="button"
+              className="ix-btn-primary mt-6 inline-flex"
+              onClick={() => setRetryToken((value) => value + 1)}
+            >
+              Retry
+            </button>
+            <Link
+              href="/interview/setup"
+              className="mt-3 block text-sm text-ix-indigo hover:underline"
+            >
+              Back to Interview Setup
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const session = load.session;
+  const experience = session.experience_level as ExperienceLevelId;
+  const difficulty = session.difficulty as DifficultyId;
+  const duration = session.duration_minutes as DurationMinutes;
 
   function submitMessage(event: FormEvent) {
     event.preventDefault();
@@ -194,7 +289,7 @@ export function InterviewRoom() {
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-full border border-[#c4bfb5] bg-white/80 px-3 py-1 text-xs text-ix-charcoal/65 sm:inline">
-              {durationLabel(config.duration)} · {difficultyLabel(config.difficulty)}
+              {durationLabel(duration)} · {difficultyLabel(difficulty)}
             </span>
             <button
               type="button"
@@ -256,29 +351,29 @@ export function InterviewRoom() {
               <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-sm sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <dt className="text-[11px] text-ix-charcoal/50">Role</dt>
-                  <dd className="font-medium text-ix-graphite">{config.role}</dd>
+                  <dd className="font-medium text-ix-graphite">{session.role}</dd>
                 </div>
                 <div>
                   <dt className="text-[11px] text-ix-charcoal/50">Experience</dt>
                   <dd className="font-medium text-ix-graphite">
-                    {experienceLabel(config.experience)}
+                    {experienceLabel(experience)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-[11px] text-ix-charcoal/50">Difficulty</dt>
                   <dd className="font-medium text-ix-graphite">
-                    {difficultyLabel(config.difficulty)}
+                    {difficultyLabel(difficulty)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-[11px] text-ix-charcoal/50">Duration</dt>
                   <dd className="font-medium text-ix-graphite">
-                    {durationLabel(config.duration)}
+                    {durationLabel(duration)}
                   </dd>
                 </div>
               </dl>
               <p className="mt-2 text-[12px] leading-relaxed text-ix-charcoal/55">
-                Focus: {config.focuses.join(" · ")}
+                Focus: {session.focus_areas.join(" · ")}
               </p>
             </aside>
           </section>
@@ -428,8 +523,8 @@ export function InterviewRoom() {
               End this interview?
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-ix-charcoal/65">
-              This practice session is local only — nothing has been recorded or
-              evaluated. You will return to the dashboard.
+              Conversation messages stay local on this page. Your interview
+              configuration remains saved. You will return to the dashboard.
             </p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button

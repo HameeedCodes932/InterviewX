@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState, type ReactNode } from "react";
-import { writeSessionConfig } from "./sessionConfig";
+import {
+  InterviewApiError,
+  createInterviewSession,
+} from "@/lib/interviews";
 import {
   DEFAULT_SETUP,
   DIFFICULTIES,
@@ -81,6 +84,7 @@ export function InterviewSetupForm() {
     DEFAULT_SETUP.duration,
   );
   const [focusError, setFocusError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const experienceLabel = useMemo(
@@ -106,8 +110,9 @@ export function InterviewSetupForm() {
     });
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
 
     if (focuses.length === 0) {
       setFocusError("Select at least one interview focus.");
@@ -115,16 +120,27 @@ export function InterviewSetupForm() {
     }
 
     setFocusError(null);
+    setFormError(null);
     setSubmitting(true);
-    writeSessionConfig({
-      category: "Software Engineering",
-      role,
-      experience,
-      focuses,
-      difficulty,
-      duration,
-    });
-    router.push("/interview/room");
+
+    try {
+      const session = await createInterviewSession({
+        category: "software_engineering",
+        role,
+        experience_level: experience,
+        focus_areas: focuses,
+        difficulty,
+        duration_minutes: duration,
+      });
+      router.push(`/interview/room/${session.id}`);
+    } catch (error) {
+      if (error instanceof InterviewApiError) {
+        setFormError(error.message);
+      } else {
+        setFormError("Unable to create the interview session. Please try again.");
+      }
+      setSubmitting(false);
+    }
   }
 
   const summary = (
@@ -320,10 +336,17 @@ export function InterviewSetupForm() {
       <div className="lg:hidden">{summary}</div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-ix-charcoal/55">
-          Review your summary, then enter the interview room. The AI interview
-          engine is not connected yet — conversation is simulated locally.
-        </p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-ix-charcoal/55">
+            Review your summary, then enter the interview room. The AI interview
+            engine is not connected yet — conversation is simulated locally.
+          </p>
+          {formError ? (
+            <p className="mt-2 text-sm text-red-800" role="alert">
+              {formError}
+            </p>
+          ) : null}
+        </div>
         <button
           type="submit"
           className="ix-btn-primary sm:w-auto sm:min-w-[12rem] sm:px-8"
