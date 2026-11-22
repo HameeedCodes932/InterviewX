@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * DEMO-ONLY guest guard — sends authenticated users away from login/signup.
+ * Redirects authenticated users away from login/signup.
  */
 
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useSyncExternalStore } from "react";
-import { getSessionSnapshot, subscribeDemoAuth } from "@/lib/demo-auth";
+import { getSessionSnapshot, subscribeAuth } from "@/lib/auth";
 
 function subscribeNever() {
   return () => {};
@@ -32,7 +32,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
     getServerFalse,
   );
   const session = useSyncExternalStore(
-    subscribeDemoAuth,
+    subscribeAuth,
     getSessionSnapshot,
     () => null,
   );

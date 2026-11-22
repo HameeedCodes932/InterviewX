@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useId, useState } from "react";
-import { DemoAuthError, registerDemoAccount } from "@/lib/demo-auth";
+import { AuthError, registerAccount } from "@/lib/auth";
 
 const PASSWORD_HINT =
   "Use at least 8 characters, including one uppercase letter, one lowercase letter, and one number.";
@@ -113,8 +113,7 @@ export function SignupForm() {
 
     setSubmitting(true);
     try {
-      // DEMO-ONLY: create local account (PBKDF2 hash) + session, then dashboard.
-      await registerDemoAccount({
+      await registerAccount({
         fullName: fullName.trim(),
         email: email.trim(),
         password,
@@ -123,13 +122,13 @@ export function SignupForm() {
       setConfirmPassword("");
       router.replace("/dashboard");
     } catch (error) {
-      if (error instanceof DemoAuthError && error.code === "duplicate_email") {
+      if (error instanceof AuthError && error.code === "duplicate_email") {
         setEmailError(error.message);
-      } else if (error instanceof DemoAuthError) {
+      } else if (error instanceof AuthError) {
         setFormNotice(error.message);
       } else {
         setFormNotice(
-          "Unable to create the demo account in this browser. Check storage permissions and try again.",
+          "Unable to create your account. Please try again in a moment.",
         );
       }
       setSubmitting(false);
@@ -386,10 +385,6 @@ export function SignupForm() {
         </Link>
       </p>
 
-      <p className="mt-3 text-center text-[11px] leading-relaxed text-ix-charcoal/40">
-        Demo Mode — accounts stay in this browser only and are not production
-        authentication.
-      </p>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * DEMO-ONLY client route guard.
- * Can be bypassed by editing browser storage — not production security.
+ * Client route guard for authenticated pages.
+ * Complements API JWT checks; still bypassable without a server-rendered gate.
  */
 
 import { usePathname, useRouter } from "next/navigation";
@@ -10,8 +10,8 @@ import { ReactNode, useEffect, useSyncExternalStore } from "react";
 import {
   getSessionSnapshot,
   rememberNextPath,
-  subscribeDemoAuth,
-} from "@/lib/demo-auth";
+  subscribeAuth,
+} from "@/lib/auth";
 
 function subscribeNever() {
   return () => {};
@@ -38,7 +38,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     getServerFalse,
   );
   const session = useSyncExternalStore(
-    subscribeDemoAuth,
+    subscribeAuth,
     getSessionSnapshot,
     () => null,
   );
@@ -53,7 +53,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   if (!ready || !session) {
     return (
       <div className="ix-dashboard-shell flex min-h-dvh items-center justify-center px-4">
-        <p className="text-sm text-ix-charcoal/55">Checking demo session…</p>
+        <p className="text-sm text-ix-charcoal/55">Checking session…</p>
       </div>
     );
   }

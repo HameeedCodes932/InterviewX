@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { DemoModeBadge } from "@/components/auth/DemoModeBadge";
 import {
   getSessionSnapshot,
   initialsFromName,
-  logoutDemoSession,
-  subscribeDemoAuth,
-} from "@/lib/demo-auth";
+  logout,
+  subscribeAuth,
+} from "@/lib/auth";
 import { LogoMark } from "./LogoMark";
 
 export function DashboardHeader() {
@@ -18,7 +17,7 @@ export function DashboardHeader() {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const session = useSyncExternalStore(
-    subscribeDemoAuth,
+    subscribeAuth,
     getSessionSnapshot,
     () => null,
   );
@@ -44,13 +43,13 @@ export function DashboardHeader() {
     };
   }, [menuOpen]);
 
-  const displayName = session?.fullName?.trim() || "Account";
-  const displayEmail = session?.email || "";
+  const displayName = session?.user.full_name?.trim() || "Account";
+  const displayEmail = session?.user.email || "";
   const initials = initialsFromName(displayName);
 
   function onSignOut() {
     setMenuOpen(false);
-    logoutDemoSession();
+    logout();
     router.replace("/login");
   }
 
@@ -88,8 +87,6 @@ export function DashboardHeader() {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <DemoModeBadge className="hidden min-[430px]:inline-flex" />
-
         <nav className="sm:hidden" aria-label="Dashboard mobile">
           <Link
             href="/dashboard"
@@ -146,9 +143,6 @@ export function DashboardHeader() {
                     {displayEmail}
                   </p>
                 ) : null}
-                <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ix-charcoal/40">
-                  Demo Mode
-                </p>
               </div>
               <div
                 role="menuitem"
@@ -168,7 +162,7 @@ export function DashboardHeader() {
               >
                 Sign out
                 <span className="mt-0.5 block text-xs text-ix-charcoal/45">
-                  Clears this demo session — your local account remains.
+                  Ends this session and returns to sign in.
                 </span>
               </button>
             </div>

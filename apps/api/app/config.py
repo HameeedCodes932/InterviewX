@@ -24,6 +24,15 @@ class Settings(BaseSettings):
         default="postgresql+psycopg://interviewx:CHANGE_ME@127.0.0.1:5432/interviewx",
         alias="DATABASE_URL",
     )
+    jwt_secret_key: str = Field(
+        default="CHANGE_ME_TO_A_LONG_RANDOM_SECRET",
+        alias="JWT_SECRET_KEY",
+    )
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(
+        default=60 * 24,
+        alias="ACCESS_TOKEN_EXPIRE_MINUTES",
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:

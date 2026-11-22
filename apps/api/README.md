@@ -122,8 +122,32 @@ curl http://127.0.0.1:8000/api/v1/health/database
 
 The Next.js app reads `NEXT_PUBLIC_API_BASE_URL` (default `http://127.0.0.1:8000`). See `apps/web/.env.example`. Temporary browser demo authentication is unchanged until a later task wires real auth.
 
+## Authentication endpoints
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/api/v1/auth/register` | Create user, return JWT + public user |
+| `POST` | `/api/v1/auth/login` | Verify credentials, return JWT + public user |
+| `GET` | `/api/v1/auth/me` | Current user (`Authorization: Bearer <token>`) |
+
+Required auth env vars (see `.env.example`):
+
+```env
+JWT_SECRET_KEY=CHANGE_ME_TO_A_LONG_RANDOM_SECRET
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+```
+
+Passwords are hashed with **bcrypt**. Access tokens are **HS256 JWTs**. Never store plaintext passwords.
+
+## Run tests
+
+```powershell
+pytest
+```
+
 ## Notes
 
 - Credentials come only from environment variables.
-- Client-side frontend route protection (if present) is unrelated to this API.
-- Do not treat this foundation as production authentication or production hardening.
+- Frontend stores the JWT in `localStorage` for SPA refresh persistence (XSS-readable). Prefer httpOnly cookies behind a same-origin reverse proxy for stronger production hardening.
+- Client route guards complement API JWT checks and are not a substitute for server authorization.
