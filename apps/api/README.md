@@ -89,7 +89,7 @@ From `apps\api` with the virtualenv active:
 alembic upgrade head
 ```
 
-This applies the foundation baseline revision (`20261122_0001`). Domain tables will be added in later tasks.
+This applies migrations through the current head (users + interview sessions).
 
 ## 6. Start the API server
 
@@ -120,7 +120,7 @@ curl http://127.0.0.1:8000/api/v1/health/database
 
 ## Frontend pairing
 
-The Next.js app reads `NEXT_PUBLIC_API_BASE_URL` (default `http://127.0.0.1:8000`). See `apps/web/.env.example`. Temporary browser demo authentication is unchanged until a later task wires real auth.
+The Next.js app reads `NEXT_PUBLIC_API_BASE_URL` (default `http://127.0.0.1:8000`). See `apps/web/.env.example`.
 
 ## Authentication endpoints
 
@@ -147,6 +147,46 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 The API refuses to start when `JWT_SECRET_KEY` is a placeholder or shorter than 32 characters (except `APP_ENV=test`), or when `ACCESS_TOKEN_EXPIRE_MINUTES` is not positive.
 
 Passwords are hashed with **bcrypt** and rejected when they exceed **72 UTF-8 bytes** (no silent truncation). Access tokens are **HS256 JWTs**. Never store plaintext passwords.
+
+## Interview session endpoints
+
+Both require `Authorization: Bearer <access_token>`. Ownership is always taken from the authenticated user — never from the request body.
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `POST` | `/api/v1/interviews` | Create a persisted interview session (201) |
+| `GET` | `/api/v1/interviews/{session_id}` | Fetch own session (404 if missing or not owned) |
+
+Example create request:
+
+```json
+{
+  "category": "software_engineering",
+  "role": "Software Engineer",
+  "experience_level": "mid",
+  "focus_areas": ["Programming & Problem Solving", "System Design"],
+  "difficulty": "medium",
+  "duration_minutes": 30
+}
+```
+
+Example create response (truncated):
+
+```json
+{
+  "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "user_id": "11111111-2222-3333-4444-555555555555",
+  "category": "software_engineering",
+  "role": "Software Engineer",
+  "experience_level": "mid",
+  "focus_areas": ["Programming & Problem Solving", "System Design"],
+  "difficulty": "medium",
+  "duration_minutes": 30,
+  "status": "created",
+  "created_at": "2026-11-22T18:00:00Z",
+  "updated_at": "2026-11-22T18:00:00Z"
+}
+```
 
 ## Run tests
 
