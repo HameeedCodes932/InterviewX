@@ -12,6 +12,7 @@ import {
 import { LogoMark } from "@/components/dashboard/LogoMark";
 import {
   InterviewApiError,
+  completeInterviewSession,
   getInterviewSession,
   type InterviewSession,
 } from "@/lib/interviews";
@@ -64,6 +65,8 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const [cameraOn, setCameraOn] = useState(false);
   const [deviceNotice, setDeviceNotice] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
@@ -201,12 +204,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   }
 
   const session = load.session;
+  const isCompleted = session.status === "completed";
   const experience = session.experience_level as ExperienceLevelId;
   const difficulty = session.difficulty as DifficultyId;
   const duration = session.duration_minutes as DurationMinutes;
 
   function submitMessage(event: FormEvent) {
     event.preventDefault();
+    if (isCompleted) return;
     const text = draft.trim();
     if (!text) {
       setDraftError("Enter a response before sending.");
@@ -238,9 +243,34 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     );
   }
 
-  function confirmEnd() {
-    setConfirmExit(false);
-    router.push("/dashboard");
+  async function confirmEnd() {
+    if (ending) return;
+
+    if (session.status === "completed") {
+      setConfirmExit(false);
+      router.push("/dashboard");
+      return;
+    }
+
+    setEnding(true);
+    setEndError(null);
+    try {
+      const updated = await completeInterviewSession(sessionId);
+      setLoad({ status: "ready", session: updated });
+      setConfirmExit(false);
+      router.push("/dashboard");
+    } catch (error: unknown) {
+      if (error instanceof InterviewApiError && error.code === "unauthenticated") {
+        router.replace("/login");
+        return;
+      }
+      setEndError(
+        error instanceof InterviewApiError
+          ? error.message
+          : "Unable to complete the interview session. Please try again.",
+      );
+      setEnding(false);
+    }
   }
 
   async function toggleFullscreen() {
@@ -286,6 +316,11 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             <span className="rounded-full bg-[#4f51b8]/12 px-2.5 py-1 text-[11px] font-semibold text-[#3f41a8]">
               Software Engineering
             </span>
+            {isCompleted ? (
+              <span className="rounded-full border border-[#c4bfb5] bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-ix-charcoal/65">
+                Completed
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-full border border-[#c4bfb5] bg-white/80 px-3 py-1 text-xs text-ix-charcoal/65 sm:inline">
@@ -306,12 +341,27 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             <button
               type="button"
               className="rounded-full border border-[#b7b2a7] bg-[#ecebe7] px-3 py-1.5 text-sm font-medium text-ix-charcoal transition hover:bg-[#e3e2dd]"
-              onClick={() => setConfirmExit(true)}
+              onClick={() => {
+                setEndError(null);
+                setConfirmExit(true);
+              }}
+              disabled={ending}
             >
-              Exit interview
+              {isCompleted ? "Leave room" : "Exit interview"}
             </button>
           </div>
         </header>
+
+        {isCompleted ? (
+          <div
+            className="mt-3 rounded-ix-sm border border-ix-indigo/25 bg-[#f7f6fb] px-3.5 py-3 text-sm text-ix-charcoal/75"
+            role="status"
+          >
+            This interview session is already completed. Conversation controls
+            are closed — return to the dashboard or start a new session from
+            Interview Setup.
+          </div>
+        ) : null}
 
         <main className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:gap-5">
           <section className="ix-room-stage flex min-h-0 flex-col">
@@ -424,8 +474,13 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                   setDraft(event.target.value);
                   if (draftError) setDraftError(null);
                 }}
-                placeholder="Type your response…"
+                placeholder={
+                  isCompleted
+                    ? "This session is completed."
+                    : "Type your response…"
+                }
                 className="ix-field min-h-[5.5rem] resize-y"
+                disabled={isCompleted || ending}
               />
               {draftError ? (
                 <p className="mt-1.5 text-sm text-red-800" role="alert">
@@ -433,7 +488,11 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 </p>
               ) : null}
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <button type="submit" className="ix-btn-primary !w-auto px-5 !py-2.5 text-sm">
+                <button
+                  type="submit"
+                  className="ix-btn-primary !w-auto px-5 !py-2.5 text-sm"
+                  disabled={isCompleted || ending}
+                >
                   Send response
                 </button>
                 <p className="text-[12px] text-ix-charcoal/50">
@@ -481,10 +540,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               </button>
               <button
                 type="button"
-                className="rounded-full border border-[#b45a5a]/40 bg-[#f8ecec] px-3.5 py-2 text-sm font-medium text-[#7a3030] transition hover:bg-[#f3e0e0]"
-                onClick={() => setConfirmExit(true)}
+                className="rounded-full border border-[#b45a5a]/40 bg-[#f8ecec] px-3.5 py-2 text-sm font-medium text-[#7a3030] transition hover:bg-[#f3e0e0] disabled:opacity-60"
+                onClick={() => {
+                  setEndError(null);
+                  setConfirmExit(true);
+                }}
+                disabled={ending}
               >
-                End Interview
+                {isCompleted ? "Leave room" : "End Interview"}
               </button>
             </div>
 
@@ -520,26 +583,44 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               id="end-interview-title"
               className="font-display text-xl tracking-tight text-ix-graphite"
             >
-              End this interview?
+              {isCompleted ? "Leave this room?" : "End this interview?"}
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-ix-charcoal/65">
-              Conversation messages stay local on this page. Your interview
-              configuration remains saved. You will return to the dashboard.
+              {isCompleted
+                ? "This session is already marked completed. You will return to the dashboard."
+                : "This will mark the interview session as completed and return you to the dashboard. Conversation messages stay local on this page."}
             </p>
+            {endError ? (
+              <p className="mt-3 text-sm text-red-800" role="alert">
+                {endError}
+              </p>
+            ) : null}
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 className="ix-btn-secondary px-4 py-2"
-                onClick={() => setConfirmExit(false)}
+                onClick={() => {
+                  if (ending) return;
+                  setConfirmExit(false);
+                  setEndError(null);
+                }}
+                disabled={ending}
               >
-                Continue session
+                {isCompleted ? "Stay" : "Continue session"}
               </button>
               <button
                 type="button"
-                className="rounded-full bg-ix-graphite px-4 py-2 text-sm font-medium text-white"
-                onClick={confirmEnd}
+                className="rounded-full bg-ix-graphite px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                onClick={() => {
+                  void confirmEnd();
+                }}
+                disabled={ending}
               >
-                End and return
+                {ending
+                  ? "Saving…"
+                  : isCompleted
+                    ? "Return to dashboard"
+                    : "End and return"}
               </button>
             </div>
           </div>

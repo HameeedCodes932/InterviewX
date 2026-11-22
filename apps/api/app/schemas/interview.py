@@ -79,5 +79,6 @@ class InterviewSessionResponse(BaseModel):
     difficulty: Difficulty
     duration_minutes: DurationMinutes
     status: str
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
