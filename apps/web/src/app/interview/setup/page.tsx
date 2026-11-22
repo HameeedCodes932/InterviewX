@@ -37,8 +37,7 @@ export default function InterviewSetupPage() {
           </main>
 
           <footer className="mt-8 shrink-0 border-t border-[#c9c5bc]/80 pb-1 pt-4 text-center text-[11px] text-ix-charcoal/45 sm:text-left">
-            © {new Date().getFullYear()} InterviewX ·{" "}
-            <span className="text-ix-charcoal/40">Demo Mode</span>
+            © {new Date().getFullYear()} InterviewX
           </footer>
         </div>
       </div>

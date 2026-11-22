@@ -3,22 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useId, useState } from "react";
-import { DemoAuthError, registerDemoAccount } from "@/lib/demo-auth";
+import {
+  AuthError,
+  registerAccount,
+  validatePasswordForSubmit,
+} from "@/lib/auth";
 
 const PASSWORD_HINT =
-  "Use at least 8 characters, including one uppercase letter, one lowercase letter, and one number.";
+  "Use at least 8 characters, including one uppercase letter, one lowercase letter, and one number. Max 72 UTF-8 bytes.";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function meetsPasswordRequirements(value: string) {
-  return (
-    value.length >= 8 &&
-    /[A-Z]/.test(value) &&
-    /[a-z]/.test(value) &&
-    /\d/.test(value)
-  );
 }
 
 export function SignupForm() {
@@ -73,13 +68,9 @@ export function SignupForm() {
       setEmailError(null);
     }
 
-    if (!password) {
-      setPasswordError("Password is required.");
-      ok = false;
-    } else if (!meetsPasswordRequirements(password)) {
-      setPasswordError(
-        "Password must be at least 8 characters and include uppercase, lowercase, and a number.",
-      );
+    const passwordIssue = validatePasswordForSubmit(password);
+    if (passwordIssue) {
+      setPasswordError(passwordIssue);
       ok = false;
     } else {
       setPasswordError(null);
@@ -113,8 +104,7 @@ export function SignupForm() {
 
     setSubmitting(true);
     try {
-      // DEMO-ONLY: create local account (PBKDF2 hash) + session, then dashboard.
-      await registerDemoAccount({
+      await registerAccount({
         fullName: fullName.trim(),
         email: email.trim(),
         password,
@@ -123,13 +113,13 @@ export function SignupForm() {
       setConfirmPassword("");
       router.replace("/dashboard");
     } catch (error) {
-      if (error instanceof DemoAuthError && error.code === "duplicate_email") {
+      if (error instanceof AuthError && error.code === "duplicate_email") {
         setEmailError(error.message);
-      } else if (error instanceof DemoAuthError) {
+      } else if (error instanceof AuthError) {
         setFormNotice(error.message);
       } else {
         setFormNotice(
-          "Unable to create the demo account in this browser. Check storage permissions and try again.",
+          "Unable to create your account. Please try again in a moment.",
         );
       }
       setSubmitting(false);
@@ -386,10 +376,6 @@ export function SignupForm() {
         </Link>
       </p>
 
-      <p className="mt-3 text-center text-[11px] leading-relaxed text-ix-charcoal/40">
-        Demo Mode — accounts stay in this browser only and are not production
-        authentication.
-      </p>
     </div>
   );
 }

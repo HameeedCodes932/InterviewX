@@ -1,8 +1,8 @@
 /**
- * Minimal fetch helper for future backend calls.
- * Not wired into auth/UI flows yet.
+ * Minimal fetch helper for InterviewX API calls.
  */
 
+import { ACCESS_TOKEN_KEY } from "@/lib/auth/storage";
 import { apiV1Url } from "./config";
 
 export class ApiError extends Error {
@@ -21,16 +21,27 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
+function readBearerToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
   const { body, headers, ...rest } = options;
+  const token = readBearerToken();
   const response = await fetch(apiV1Url(path), {
     ...rest,
     headers: {
       Accept: "application/json",
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),

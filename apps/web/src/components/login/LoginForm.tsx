@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useId, useState, useSyncExternalStore } from "react";
 import {
-  DemoAuthError,
+  AuthError,
   consumeNextPath,
-  loginDemoAccount,
-} from "@/lib/demo-auth";
+  loginAccount,
+  validateLoginPassword,
+} from "@/lib/auth";
 
 const REMEMBER_KEY = "interviewx.login.rememberEmail";
 
@@ -67,11 +68,9 @@ export function LoginForm() {
       setEmailError(null);
     }
 
-    if (!password) {
-      setPasswordError("Password is required.");
-      ok = false;
-    } else if (password.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
+    const passwordIssue = validateLoginPassword(password);
+    if (passwordIssue) {
+      setPasswordError(passwordIssue);
       ok = false;
     } else {
       setPasswordError(null);
@@ -100,22 +99,17 @@ export function LoginForm() {
     }
 
     try {
-      // DEMO-ONLY: verify email + PBKDF2 hash, then create session.
-      await loginDemoAccount({
+      await loginAccount({
         email: email.trim(),
         password,
       });
       setPassword("");
       router.replace(consumeNextPath("/dashboard"));
     } catch (error) {
-      if (error instanceof DemoAuthError && error.code === "invalid_credentials") {
-        setFormError(error.message);
-      } else if (error instanceof DemoAuthError) {
+      if (error instanceof AuthError) {
         setFormError(error.message);
       } else {
-        setFormError(
-          "Unable to sign in with demo authentication in this browser.",
-        );
+        setFormError("Unable to sign in. Please try again in a moment.");
       }
       setSubmitting(false);
     }
@@ -270,8 +264,8 @@ export function LoginForm() {
       </p>
 
       <p className="mt-4 text-center text-[11px] leading-relaxed text-ix-charcoal/38">
-        Demo Mode — sign-in uses a local browser account for testing only. Google
-        and GitHub sign-in are omitted until real authentication lands.
+        Google and GitHub sign-in are omitted until those providers are
+        connected.
       </p>
     </div>
   );
