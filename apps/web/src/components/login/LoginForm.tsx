@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useId, useState, useSyncExternalStore } from "react";
+import {
+  DemoAuthError,
+  consumeNextPath,
+  loginDemoAccount,
+} from "@/lib/demo-auth";
 
 const REMEMBER_KEY = "interviewx.login.rememberEmail";
 
@@ -23,6 +29,7 @@ function subscribeRemembered(onStoreChange: () => void) {
 }
 
 export function LoginForm() {
+  const router = useRouter();
   const emailId = useId();
   const passwordId = useId();
   const rememberId = useId();
@@ -40,6 +47,7 @@ export function LoginForm() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formNotice, setFormNotice] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const email = emailDraft ?? storedEmail;
@@ -75,6 +83,7 @@ export function LoginForm() {
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormNotice(null);
+    setFormError(null);
 
     if (!validate()) return;
 
@@ -90,12 +99,26 @@ export function LoginForm() {
       /* ignore */
     }
 
-    // Honest non-operational state — authentication is not wired yet.
-    await new Promise((r) => setTimeout(r, 450));
-    setSubmitting(false);
-    setFormNotice(
-      "Sign-in is not connected yet — authentication will be wired in a later task. Your details were validated locally only.",
-    );
+    try {
+      // DEMO-ONLY: verify email + PBKDF2 hash, then create session.
+      await loginDemoAccount({
+        email: email.trim(),
+        password,
+      });
+      setPassword("");
+      router.replace(consumeNextPath("/dashboard"));
+    } catch (error) {
+      if (error instanceof DemoAuthError && error.code === "invalid_credentials") {
+        setFormError(error.message);
+      } else if (error instanceof DemoAuthError) {
+        setFormError(error.message);
+      } else {
+        setFormError(
+          "Unable to sign in with demo authentication in this browser.",
+        );
+      }
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -132,6 +155,7 @@ export function LoginForm() {
               setEmail(ev.target.value);
               if (emailError) setEmailError(null);
               if (formNotice) setFormNotice(null);
+              if (formError) setFormError(null);
             }}
           />
           {emailError ? (
@@ -168,6 +192,7 @@ export function LoginForm() {
                 setPassword(ev.target.value);
                 if (passwordError) setPasswordError(null);
                 if (formNotice) setFormNotice(null);
+                if (formError) setFormError(null);
               }}
             />
             <button
@@ -206,6 +231,15 @@ export function LoginForm() {
           Remember me
         </label>
 
+        {formError ? (
+          <p
+            className="rounded-ix-sm border border-red-700/25 bg-[#fbf4f4] px-3.5 py-3 text-sm leading-relaxed text-red-900"
+            role="alert"
+          >
+            {formError}
+          </p>
+        ) : null}
+
         {formNotice ? (
           <p
             className="rounded-ix-sm border border-ix-indigo/20 bg-white/70 px-3.5 py-3 text-sm leading-relaxed text-ix-charcoal/80"
@@ -236,8 +270,8 @@ export function LoginForm() {
       </p>
 
       <p className="mt-4 text-center text-[11px] leading-relaxed text-ix-charcoal/38">
-        Google and GitHub sign-in are omitted until authentication infrastructure
-        supports them.
+        Demo Mode — sign-in uses a local browser account for testing only. Google
+        and GitHub sign-in are omitted until real authentication lands.
       </p>
     </div>
   );

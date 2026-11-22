@@ -1,13 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { DemoModeBadge } from "@/components/auth/DemoModeBadge";
+import {
+  getSessionSnapshot,
+  initialsFromName,
+  logoutDemoSession,
+  subscribeDemoAuth,
+} from "@/lib/demo-auth";
 import { LogoMark } from "./LogoMark";
 
 export function DashboardHeader() {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const session = useSyncExternalStore(
+    subscribeDemoAuth,
+    getSessionSnapshot,
+    () => null,
+  );
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -29,6 +43,16 @@ export function DashboardHeader() {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [menuOpen]);
+
+  const displayName = session?.fullName?.trim() || "Account";
+  const displayEmail = session?.email || "";
+  const initials = initialsFromName(displayName);
+
+  function onSignOut() {
+    setMenuOpen(false);
+    logoutDemoSession();
+    router.replace("/login");
+  }
 
   return (
     <header className="flex items-center justify-between gap-3 border-b border-[#d9d6cf]/70 pb-4">
@@ -64,6 +88,8 @@ export function DashboardHeader() {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        <DemoModeBadge className="hidden min-[430px]:inline-flex" />
+
         <nav className="sm:hidden" aria-label="Dashboard mobile">
           <Link
             href="/dashboard"
@@ -84,9 +110,11 @@ export function DashboardHeader() {
             onClick={() => setMenuOpen((open) => !open)}
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ix-graphite text-[11px] font-semibold text-white">
-              A
+              {initials}
             </span>
-            <span className="hidden min-[430px]:inline">Account</span>
+            <span className="hidden max-w-[9rem] truncate min-[430px]:inline">
+              {displayName.split(" ")[0]}
+            </span>
             <svg
               viewBox="0 0 12 12"
               className={`h-3 w-3 text-ix-charcoal/55 transition ${menuOpen ? "rotate-180" : ""}`}
@@ -110,9 +138,16 @@ export function DashboardHeader() {
               className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-[#d9d6cf] bg-[#f7f6f2] shadow-[0_18px_40px_-24px_rgba(23,25,31,0.45)]"
             >
               <div className="border-b border-[#d9d6cf]/80 px-3.5 py-3">
-                <p className="text-sm font-medium text-ix-graphite">Account</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-ix-charcoal/50">
-                  Profile details will appear when authentication is connected.
+                <p className="truncate text-sm font-medium text-ix-graphite">
+                  {displayName}
+                </p>
+                {displayEmail ? (
+                  <p className="mt-0.5 truncate text-xs leading-relaxed text-ix-charcoal/55">
+                    {displayEmail}
+                  </p>
+                ) : null}
+                <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ix-charcoal/40">
+                  Demo Mode
                 </p>
               </div>
               <div
@@ -125,17 +160,17 @@ export function DashboardHeader() {
                   Visual placeholder — coming in a later task.
                 </span>
               </div>
-              <Link
-                href="/login"
+              <button
+                type="button"
                 role="menuitem"
-                className="block px-3.5 py-3 text-sm text-ix-charcoal transition hover:bg-[#ecebe7]"
-                onClick={() => setMenuOpen(false)}
+                className="block w-full px-3.5 py-3 text-left text-sm text-ix-charcoal transition hover:bg-[#ecebe7]"
+                onClick={onSignOut}
               >
                 Sign out
                 <span className="mt-0.5 block text-xs text-ix-charcoal/45">
-                  Returns to sign in — no session is cleared yet.
+                  Clears this demo session — your local account remains.
                 </span>
-              </Link>
+              </button>
             </div>
           ) : null}
         </div>

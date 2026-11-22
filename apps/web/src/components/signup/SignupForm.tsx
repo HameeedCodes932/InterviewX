@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useId, useState } from "react";
+import { DemoAuthError, registerDemoAccount } from "@/lib/demo-auth";
 
 const PASSWORD_HINT =
   "Use at least 8 characters, including one uppercase letter, one lowercase letter, and one number.";
@@ -20,6 +22,7 @@ function meetsPasswordRequirements(value: string) {
 }
 
 export function SignupForm() {
+  const router = useRouter();
   const nameId = useId();
   const emailId = useId();
   const passwordId = useId();
@@ -109,13 +112,28 @@ export function SignupForm() {
     if (!validate()) return;
 
     setSubmitting(true);
-    // Honest non-operational state — authentication is not wired yet.
-    // Do not persist passwords or signup form data.
-    await new Promise((r) => setTimeout(r, 450));
-    setSubmitting(false);
-    setFormNotice(
-      "Account creation is not connected yet — authentication will be wired in a later task.",
-    );
+    try {
+      // DEMO-ONLY: create local account (PBKDF2 hash) + session, then dashboard.
+      await registerDemoAccount({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        password,
+      });
+      setPassword("");
+      setConfirmPassword("");
+      router.replace("/dashboard");
+    } catch (error) {
+      if (error instanceof DemoAuthError && error.code === "duplicate_email") {
+        setEmailError(error.message);
+      } else if (error instanceof DemoAuthError) {
+        setFormNotice(error.message);
+      } else {
+        setFormNotice(
+          "Unable to create the demo account in this browser. Check storage permissions and try again.",
+        );
+      }
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -366,6 +384,11 @@ export function SignupForm() {
         <Link href="/login" className="ix-link font-medium">
           Sign in
         </Link>
+      </p>
+
+      <p className="mt-3 text-center text-[11px] leading-relaxed text-ix-charcoal/40">
+        Demo Mode — accounts stay in this browser only and are not production
+        authentication.
       </p>
     </div>
   );
