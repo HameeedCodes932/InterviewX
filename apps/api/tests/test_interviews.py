@@ -253,6 +253,22 @@ def test_unauthenticated_cannot_list_sessions(client) -> None:
     assert response.status_code == 401
 
 
+def test_interviews_collection_registers_get_and_post(client) -> None:
+    """Regression: collection must expose GET list, not POST-only (405)."""
+    schema = client.get("/openapi.json").json()
+    methods = schema["paths"]["/api/v1/interviews"]
+    assert "get" in methods
+    assert "post" in methods
+
+    auth = _register(client, email="list-methods@example.com")
+    listed = client.get(
+        "/api/v1/interviews",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert listed.status_code == 200
+    assert listed.json()["items"] == []
+
+
 def test_list_returns_empty_for_new_user(client) -> None:
     auth = _register(client, email="list-empty@example.com")
     response = client.get(

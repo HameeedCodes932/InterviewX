@@ -16,8 +16,18 @@ import {
   mapListInterviewSessionsErrorCode,
   messageForListInterviewSessionsError,
 } from "../src/lib/interviews/listSessionError.ts";
+import { buildListInterviewSessionsPath } from "../src/lib/interviews/listSessionsPath.ts";
 
 assert.equal(categoryLabel("software_engineering"), "Software Engineering");
+assert.equal(buildListInterviewSessionsPath(), "/interviews");
+assert.equal(
+  buildListInterviewSessionsPath({ limit: 10, offset: 0 }),
+  "/interviews?limit=10&offset=0",
+);
+assert.equal(
+  buildListInterviewSessionsPath({ limit: 3 }),
+  "/interviews?limit=3",
+);
 assert.equal(statusLabel("in_progress"), "In Progress");
 assert.equal(statusLabel("completed"), "Completed");
 assert.equal(difficultyLabel("medium"), "Medium");

@@ -25,21 +25,13 @@ from app.services.interview_sessions import (
 router = APIRouter(prefix="/interviews", tags=["interviews"])
 
 
-@router.post(
+# Register GET before POST on the collection path so list is always present in
+# the route table / OpenAPI alongside create (avoids POST-only 405 regressions).
+@router.get(
     "",
-    response_model=InterviewSessionResponse,
-    status_code=status.HTTP_201_CREATED,
+    response_model=InterviewSessionListResponse,
+    summary="List interview sessions",
 )
-def create_session(
-    payload: InterviewSessionCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> InterviewSessionResponse:
-    session = create_interview_session(db, user=current_user, payload=payload)
-    return InterviewSessionResponse.model_validate(session)
-
-
-@router.get("", response_model=InterviewSessionListResponse)
 def list_sessions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -58,6 +50,21 @@ def list_sessions(
         limit=limit,
         offset=offset,
     )
+
+
+@router.post(
+    "",
+    response_model=InterviewSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create interview session",
+)
+def create_session(
+    payload: InterviewSessionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InterviewSessionResponse:
+    session = create_interview_session(db, user=current_user, payload=payload)
+    return InterviewSessionResponse.model_validate(session)
 
 
 @router.get("/{session_id}", response_model=InterviewSessionResponse)

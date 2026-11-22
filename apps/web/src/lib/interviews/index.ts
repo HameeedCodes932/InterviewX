@@ -16,6 +16,7 @@ import {
   mapListInterviewSessionsErrorCode,
   messageForListInterviewSessionsError,
 } from "./listSessionError";
+import { buildListInterviewSessionsPath } from "./listSessionsPath";
 import type {
   InterviewSession,
   InterviewSessionCreateRequest,
@@ -58,6 +59,7 @@ export {
   sessionOpenHref,
   statusLabel,
 } from "./display";
+export { buildListInterviewSessionsPath } from "./listSessionsPath";
 
 export class InterviewApiError extends Error {
   code: string;
@@ -106,14 +108,13 @@ export async function createInterviewSession(
 export async function listInterviewSessions(
   params: ListInterviewSessionsParams = {},
 ): Promise<InterviewSessionListResponse> {
-  const search = new URLSearchParams();
-  if (params.limit != null) search.set("limit", String(params.limit));
-  if (params.offset != null) search.set("offset", String(params.offset));
-  const query = search.toString();
-  const path = query ? `/interviews?${query}` : "/interviews";
+  const path = buildListInterviewSessionsPath(params);
 
   try {
-    return await apiFetch<InterviewSessionListResponse>(path);
+    // Explicit GET — must match FastAPI `GET /api/v1/interviews` (not POST create).
+    return await apiFetch<InterviewSessionListResponse>(path, {
+      method: "GET",
+    });
   } catch (error) {
     if (error instanceof ApiError) {
       const code = mapListInterviewSessionsErrorCode(error.status);
