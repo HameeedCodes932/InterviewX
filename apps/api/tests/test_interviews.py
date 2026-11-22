@@ -115,6 +115,15 @@ def test_nonexistent_session_returns_404(client) -> None:
     assert response.status_code == 404
 
 
+def test_malformed_session_id_returns_422(client) -> None:
+    auth = _register(client, email="malformed-id@example.com")
+    response = client.get(
+        "/api/v1/interviews/not-a-valid-uuid",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert response.status_code == 422
+
+
 def test_invalid_role_rejected(client) -> None:
     auth = _register(client, email="bad-role@example.com")
     payload = {**VALID_PAYLOAD, "role": "Product Manager"}

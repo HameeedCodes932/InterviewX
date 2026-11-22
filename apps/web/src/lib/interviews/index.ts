@@ -69,11 +69,13 @@ export async function getInterviewSession(
     return await apiFetch<InterviewSession>(`/interviews/${sessionId}`);
   } catch (error) {
     if (error instanceof ApiError) {
-      if (error.status === 404) {
+      // FastAPI returns 422 when the path UUID cannot be parsed. Treat that the
+      // same as a missing session so the room shows the not-found state.
+      if (error.status === 404 || error.status === 422) {
         throw new InterviewApiError(
           "not_found",
-          detailMessage(error.body, "Interview session not found."),
-          404,
+          "Interview session not found.",
+          error.status,
         );
       }
       if (error.status === 401) {
