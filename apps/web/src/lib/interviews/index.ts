@@ -12,9 +12,15 @@ import {
   mapGetInterviewSessionErrorCode,
   messageForGetInterviewSessionError,
 } from "./getSessionError";
+import {
+  mapListInterviewSessionsErrorCode,
+  messageForListInterviewSessionsError,
+} from "./listSessionError";
 import type {
   InterviewSession,
   InterviewSessionCreateRequest,
+  InterviewSessionListResponse,
+  ListInterviewSessionsParams,
 } from "./types";
 
 export type {
@@ -24,7 +30,9 @@ export type {
   InterviewCategory,
   InterviewSession,
   InterviewSessionCreateRequest,
+  InterviewSessionListResponse,
   InterviewSessionStatus,
+  ListInterviewSessionsParams,
 } from "./types";
 
 export {
@@ -37,6 +45,19 @@ export {
   messageForCompleteInterviewSessionError,
 } from "./completeSessionError";
 export type { CompleteInterviewSessionErrorCode } from "./completeSessionError";
+export {
+  mapListInterviewSessionsErrorCode,
+  messageForListInterviewSessionsError,
+} from "./listSessionError";
+export type { ListInterviewSessionsErrorCode } from "./listSessionError";
+export {
+  categoryLabel,
+  difficultyLabel,
+  durationLabel,
+  formatSessionDate,
+  sessionOpenHref,
+  statusLabel,
+} from "./display";
 
 export class InterviewApiError extends Error {
   code: string;
@@ -78,6 +99,34 @@ export async function createInterviewSession(
     throw new InterviewApiError(
       "network",
       "Unable to reach the interview service. Is the API running?",
+    );
+  }
+}
+
+export async function listInterviewSessions(
+  params: ListInterviewSessionsParams = {},
+): Promise<InterviewSessionListResponse> {
+  const search = new URLSearchParams();
+  if (params.limit != null) search.set("limit", String(params.limit));
+  if (params.offset != null) search.set("offset", String(params.offset));
+  const query = search.toString();
+  const path = query ? `/interviews?${query}` : "/interviews";
+
+  try {
+    return await apiFetch<InterviewSessionListResponse>(path);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const code = mapListInterviewSessionsErrorCode(error.status);
+      const message = messageForListInterviewSessionsError(
+        code,
+        detailMessage(error.body, "Unable to load interview history."),
+      );
+      throw new InterviewApiError(code, message, error.status);
+    }
+    const code = mapListInterviewSessionsErrorCode(null);
+    throw new InterviewApiError(
+      code,
+      messageForListInterviewSessionsError(code),
     );
   }
 }

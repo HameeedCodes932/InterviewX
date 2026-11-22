@@ -155,8 +155,20 @@ Both require `Authorization: Bearer <access_token>`. Ownership is always taken f
 | Method | Path | Description |
 | ------ | ---- | ----------- |
 | `POST` | `/api/v1/interviews` | Create a persisted interview session (201) |
+| `GET` | `/api/v1/interviews` | List own sessions newest-first (`limit`/`offset`) |
 | `GET` | `/api/v1/interviews/{session_id}` | Fetch own session (404 if missing or not owned) |
 | `POST` | `/api/v1/interviews/{session_id}/complete` | Mark own session completed (idempotent) |
+
+List pagination: `limit` defaults to `20` (max `50`), `offset` defaults to `0`. Response shape:
+
+```json
+{
+  "items": [ /* InterviewSessionResponse objects */ ],
+  "total": 0,
+  "limit": 20,
+  "offset": 0
+}
+```
 
 Example create request:
 

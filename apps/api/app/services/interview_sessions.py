@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.interview_session import InterviewSession
@@ -14,6 +14,9 @@ from app.schemas.interview import InterviewSessionCreate
 
 SESSION_STATUS_IN_PROGRESS = "in_progress"
 SESSION_STATUS_COMPLETED = "completed"
+
+DEFAULT_LIST_LIMIT = 20
+MAX_LIST_LIMIT = 50
 
 
 def create_interview_session(
@@ -52,6 +55,28 @@ def get_owned_interview_session(
             InterviewSession.user_id == user.id,
         )
     )
+
+
+def list_owned_interview_sessions(
+    db: Session,
+    *,
+    user: User,
+    limit: int,
+    offset: int,
+) -> tuple[list[InterviewSession], int]:
+    """Return the authenticated user's sessions, newest first."""
+    owner_filter = InterviewSession.user_id == user.id
+    total = db.scalar(
+        select(func.count()).select_from(InterviewSession).where(owner_filter)
+    )
+    items = db.scalars(
+        select(InterviewSession)
+        .where(owner_filter)
+        .order_by(InterviewSession.created_at.desc(), InterviewSession.id.desc())
+        .limit(limit)
+        .offset(offset)
+    ).all()
+    return list(items), int(total or 0)
 
 
 def complete_owned_interview_session(

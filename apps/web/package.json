@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:auth-policy": "node scripts/password-policy.test.mjs",
     "test:interview-errors": "node --experimental-strip-types scripts/interview-session-errors.test.mts",
-    "test:complete-errors": "node --experimental-strip-types scripts/complete-session-errors.test.mts"
+    "test:complete-errors": "node --experimental-strip-types scripts/complete-session-errors.test.mts",
+    "test:interview-display": "node --experimental-strip-types scripts/interview-display.test.mts"
   },
   "dependencies": {
     "next": "^16.4.6",
