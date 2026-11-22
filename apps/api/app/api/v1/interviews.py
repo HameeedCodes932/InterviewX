@@ -171,6 +171,11 @@ def create_message(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=exc.message,
             ) from exc
+        if exc.code == "conflict":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=exc.message,
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=exc.message,

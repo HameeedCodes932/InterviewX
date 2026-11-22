@@ -104,15 +104,24 @@ export {
 export {
   DEFAULT_INTERVIEW_GREETING,
   beginOptimisticMessage,
+  canCompleteInterview,
   canSubmitCandidateReply,
   completeMessageSave,
+  completionBlockReason,
   failMessageSave,
+  hasFailedSave,
   hasPendingSave,
+  hasUnsavedMessages,
   mapApiMessageToRoom,
   markMessageSaving,
+  messageForCompletionBlock,
   messagesFromApi,
 } from "./roomMessages";
-export type { RoomMessage, RoomMessageStatus } from "./roomMessages";
+export type {
+  CompletionBlockReason,
+  RoomMessage,
+  RoomMessageStatus,
+} from "./roomMessages";
 
 export class InterviewApiError extends Error {
   code: string;

@@ -113,6 +113,42 @@ export function hasPendingSave(messages: RoomMessage[]): boolean {
   return messages.some((message) => message.status === "saving");
 }
 
+export function hasFailedSave(messages: RoomMessage[]): boolean {
+  return messages.some((message) => message.status === "failed");
+}
+
+export function hasUnsavedMessages(messages: RoomMessage[]): boolean {
+  return hasPendingSave(messages) || hasFailedSave(messages);
+}
+
+export type CompletionBlockReason = "saving" | "failed" | null;
+
+/** Why ending an in-progress interview must wait (null = safe to complete). */
+export function completionBlockReason(
+  messages: RoomMessage[],
+): CompletionBlockReason {
+  if (hasPendingSave(messages)) return "saving";
+  if (hasFailedSave(messages)) return "failed";
+  return null;
+}
+
+export function canCompleteInterview(messages: RoomMessage[]): boolean {
+  return completionBlockReason(messages) === null;
+}
+
+export function messageForCompletionBlock(
+  reason: CompletionBlockReason,
+): string | null {
+  switch (reason) {
+    case "saving":
+      return "Wait for all messages to finish saving before ending the interview.";
+    case "failed":
+      return "One or more messages failed to save. Retry those saves before ending the interview.";
+    case null:
+      return null;
+  }
+}
+
 export function canSubmitCandidateReply(options: {
   isCompleted: boolean;
   draft: string;

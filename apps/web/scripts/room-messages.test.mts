@@ -15,11 +15,16 @@ import {
 } from "../src/lib/interviews/messageError.ts";
 import {
   beginOptimisticMessage,
+  canCompleteInterview,
   canSubmitCandidateReply,
   completeMessageSave,
+  completionBlockReason,
   failMessageSave,
+  hasFailedSave,
   hasPendingSave,
+  hasUnsavedMessages,
   markMessageSaving,
+  messageForCompletionBlock,
   messagesFromApi,
 } from "../src/lib/interviews/roomMessages.ts";
 import type { InterviewMessage } from "../src/lib/interviews/types.ts";
@@ -142,5 +147,47 @@ assert.equal(
   }),
   true,
 );
+
+// Completion must wait for pending / failed saves.
+assert.equal(canCompleteInterview(ordered), true);
+assert.equal(completionBlockReason(ordered), null);
+
+const savingOnly = beginOptimisticMessage(ordered, {
+  clientMessageId: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+  speaker: "candidate",
+  text: "Still saving",
+});
+assert.equal(completionBlockReason(savingOnly), "saving");
+assert.equal(canCompleteInterview(savingOnly), false);
+assert.equal(hasUnsavedMessages(savingOnly), true);
+assert.match(
+  messageForCompletionBlock("saving") ?? "",
+  /finish saving/i,
+);
+
+const failedOnly = failMessageSave(
+  savingOnly,
+  "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+  "Network down",
+);
+assert.equal(completionBlockReason(failedOnly), "failed");
+assert.equal(hasFailedSave(failedOnly), true);
+assert.equal(canCompleteInterview(failedOnly), false);
+assert.match(
+  messageForCompletionBlock("failed") ?? "",
+  /failed to save/i,
+);
+
+const recovered = completeMessageSave(failedOnly, {
+  id: "m4",
+  session_id: sessionId,
+  speaker: "candidate",
+  content: "Still saving",
+  sequence: 4,
+  client_message_id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+  created_at: "2026-11-23T10:00:03.000Z",
+});
+assert.equal(canCompleteInterview(recovered), true);
+assert.equal(completionBlockReason(recovered), null);
 
 console.log("room-messages.test.mts: ok");

@@ -14,9 +14,11 @@ import {
   DEFAULT_INTERVIEW_GREETING,
   InterviewApiError,
   beginOptimisticMessage,
+  canCompleteInterview,
   canSubmitCandidateReply,
   completeInterviewSession,
   completeMessageSave,
+  completionBlockReason,
   createInterviewMessage,
   failMessageSave,
   getInterviewSession,
@@ -24,6 +26,7 @@ import {
   hasPendingSave,
   listInterviewMessages,
   markMessageSaving,
+  messageForCompletionBlock,
   messagesFromApi,
   newClientMessageId,
   type InterviewSession,
@@ -270,6 +273,30 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const duration = session.duration_minutes as DurationMinutes;
   const transcriptBusy =
     transcript.status === "loading" || hasPendingSave(messages);
+  const endBlockReason = isCompleted
+    ? null
+    : completionBlockReason(messages);
+  const endBlocked = endBlockReason !== null;
+  const endBlockedMessage = messageForCompletionBlock(endBlockReason);
+
+  function requestEndInterview() {
+    if (ending) return;
+    if (session.status === "completed") {
+      setEndError(null);
+      setConfirmExit(true);
+      return;
+    }
+    if (!canCompleteInterview(messages)) {
+      setEndError(
+        messageForCompletionBlock(completionBlockReason(messages)) ??
+          "Save all messages before ending the interview.",
+      );
+      setConfirmExit(true);
+      return;
+    }
+    setEndError(null);
+    setConfirmExit(true);
+  }
 
   async function persistMessage(input: {
     clientMessageId: string;
@@ -385,9 +412,27 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
       return;
     }
 
+    const block = completionBlockReason(messages);
+    if (block !== null) {
+      setEndError(
+        messageForCompletionBlock(block) ??
+          "Save all messages before ending the interview.",
+      );
+      return;
+    }
+
     setEnding(true);
     setEndError(null);
     try {
+      // Re-check immediately before the network call in case a save started.
+      if (!canCompleteInterview(messages)) {
+        setEnding(false);
+        setEndError(
+          messageForCompletionBlock(completionBlockReason(messages)) ??
+            "Save all messages before ending the interview.",
+        );
+        return;
+      }
       const updated = await completeInterviewSession(sessionId);
       setLoad({ status: "ready", session: updated });
       setConfirmExit(false);
@@ -473,12 +518,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             </button>
             <button
               type="button"
-              className="rounded-full border border-[#b7b2a7] bg-[#ecebe7] px-3 py-1.5 text-sm font-medium text-ix-charcoal transition hover:bg-[#e3e2dd]"
-              onClick={() => {
-                setEndError(null);
-                setConfirmExit(true);
-              }}
-              disabled={ending}
+              className="rounded-full border border-[#b7b2a7] bg-[#ecebe7] px-3 py-1.5 text-sm font-medium text-ix-charcoal transition hover:bg-[#e3e2dd] disabled:opacity-60"
+              onClick={requestEndInterview}
+              disabled={ending || (!isCompleted && endBlocked)}
+              title={
+                !isCompleted && endBlockedMessage
+                  ? endBlockedMessage
+                  : undefined
+              }
             >
               {isCompleted ? "Leave room" : "Exit interview"}
             </button>
@@ -723,15 +770,22 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               <button
                 type="button"
                 className="rounded-full border border-[#b45a5a]/40 bg-[#f8ecec] px-3.5 py-2 text-sm font-medium text-[#7a3030] transition hover:bg-[#f3e0e0] disabled:opacity-60"
-                onClick={() => {
-                  setEndError(null);
-                  setConfirmExit(true);
-                }}
-                disabled={ending}
+                onClick={requestEndInterview}
+                disabled={ending || (!isCompleted && endBlocked)}
+                title={
+                  !isCompleted && endBlockedMessage
+                    ? endBlockedMessage
+                    : undefined
+                }
               >
                 {isCompleted ? "Leave room" : "End Interview"}
               </button>
             </div>
+            {!isCompleted && endBlockedMessage ? (
+              <p className="mt-2 text-[12px] text-[#7a3030]" role="status">
+                {endBlockedMessage}
+              </p>
+            ) : null}
 
             {deviceNotice ? (
               <p
@@ -770,8 +824,13 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             <p className="mt-2 text-sm leading-relaxed text-ix-charcoal/65">
               {isCompleted
                 ? "This session is already marked completed. You will return to the dashboard."
-                : "This will mark the interview session as completed and return you to the dashboard. Conversation messages stay local on this page."}
+                : "This will mark the interview session as completed and return you to the dashboard. Messages already saved on the server remain available when you reopen this interview."}
             </p>
+            {endBlockedMessage ? (
+              <p className="mt-3 text-sm text-[#7a3030]" role="status">
+                {endBlockedMessage}
+              </p>
+            ) : null}
             {endError ? (
               <p className="mt-3 text-sm text-red-800" role="alert">
                 {endError}
@@ -796,10 +855,10 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 onClick={() => {
                   void confirmEnd();
                 }}
-                disabled={ending}
+                disabled={ending || (!isCompleted && endBlocked)}
               >
                 {ending
-                  ? "Saving…"
+                  ? "Ending…"
                   : isCompleted
                     ? "Return to dashboard"
                     : "End and return"}
