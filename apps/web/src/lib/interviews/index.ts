@@ -4,6 +4,10 @@
  */
 
 import { ApiError, apiFetch } from "@/lib/api";
+import {
+  mapGetInterviewSessionErrorCode,
+  messageForGetInterviewSessionError,
+} from "./getSessionError";
 import type {
   InterviewSession,
   InterviewSessionCreateRequest,
@@ -17,6 +21,12 @@ export type {
   InterviewSession,
   InterviewSessionCreateRequest,
 } from "./types";
+
+export {
+  mapGetInterviewSessionErrorCode,
+  messageForGetInterviewSessionError,
+} from "./getSessionError";
+export type { GetInterviewSessionErrorCode } from "./getSessionError";
 
 export class InterviewApiError extends Error {
   code: string;
@@ -69,31 +79,17 @@ export async function getInterviewSession(
     return await apiFetch<InterviewSession>(`/interviews/${sessionId}`);
   } catch (error) {
     if (error instanceof ApiError) {
-      // FastAPI returns 422 when the path UUID cannot be parsed. Treat that the
-      // same as a missing session so the room shows the not-found state.
-      if (error.status === 404 || error.status === 422) {
-        throw new InterviewApiError(
-          "not_found",
-          "Interview session not found.",
-          error.status,
-        );
-      }
-      if (error.status === 401) {
-        throw new InterviewApiError(
-          "unauthenticated",
-          "Your session expired. Please sign in again.",
-          401,
-        );
-      }
-      throw new InterviewApiError(
-        "fetch_failed",
+      const code = mapGetInterviewSessionErrorCode(error.status);
+      const message = messageForGetInterviewSessionError(
+        code,
         detailMessage(error.body, "Unable to load the interview session."),
-        error.status,
       );
+      throw new InterviewApiError(code, message, error.status);
     }
+    const code = mapGetInterviewSessionErrorCode(null);
     throw new InterviewApiError(
-      "network",
-      "Unable to reach the interview service. Is the API running?",
+      code,
+      messageForGetInterviewSessionError(code),
     );
   }
 }

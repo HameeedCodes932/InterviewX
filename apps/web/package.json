@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:auth-policy": "node scripts/password-policy.test.mjs",
-    "test:interview-errors": "node scripts/interview-session-errors.test.mjs"
+    "test:interview-errors": "node --experimental-strip-types scripts/interview-session-errors.test.mts"
   },
   "dependencies": {
     "next": "^16.4.6",
