@@ -82,3 +82,10 @@ class InterviewSessionResponse(BaseModel):
     completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class InterviewSessionListResponse(BaseModel):
+    items: list[InterviewSessionResponse]
+    total: int
+    limit: int
+    offset: int

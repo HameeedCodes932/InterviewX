@@ -28,3 +28,15 @@ export type InterviewSession = {
   created_at: string;
   updated_at: string;
 };
+
+export type InterviewSessionListResponse = {
+  items: InterviewSession[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type ListInterviewSessionsParams = {
+  limit?: number;
+  offset?: number;
+};

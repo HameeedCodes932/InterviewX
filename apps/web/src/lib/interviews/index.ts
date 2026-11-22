@@ -12,9 +12,16 @@ import {
   mapGetInterviewSessionErrorCode,
   messageForGetInterviewSessionError,
 } from "./getSessionError";
+import {
+  mapListInterviewSessionsErrorCode,
+  messageForListInterviewSessionsError,
+} from "./listSessionError";
+import { buildListInterviewSessionsPath } from "./listSessionsPath";
 import type {
   InterviewSession,
   InterviewSessionCreateRequest,
+  InterviewSessionListResponse,
+  ListInterviewSessionsParams,
 } from "./types";
 
 export type {
@@ -24,7 +31,9 @@ export type {
   InterviewCategory,
   InterviewSession,
   InterviewSessionCreateRequest,
+  InterviewSessionListResponse,
   InterviewSessionStatus,
+  ListInterviewSessionsParams,
 } from "./types";
 
 export {
@@ -37,6 +46,33 @@ export {
   messageForCompleteInterviewSessionError,
 } from "./completeSessionError";
 export type { CompleteInterviewSessionErrorCode } from "./completeSessionError";
+export {
+  mapListInterviewSessionsErrorCode,
+  messageForListInterviewSessionsError,
+} from "./listSessionError";
+export type { ListInterviewSessionsErrorCode } from "./listSessionError";
+export {
+  categoryLabel,
+  difficultyLabel,
+  durationLabel,
+  formatSessionDate,
+  sessionOpenHref,
+  statusLabel,
+} from "./display";
+export { buildListInterviewSessionsPath } from "./listSessionsPath";
+export {
+  beginLoadMore,
+  canLoadMore,
+  completeLoadMoreFailure,
+  completeLoadMoreSuccess,
+  completeLoadMoreUnauthenticated,
+  runHistoryLoadMore,
+} from "./historyLoadMore";
+export type {
+  LoadMoreInFlightLock,
+  ReadyHistoryPage,
+  RunHistoryLoadMoreDeps,
+} from "./historyLoadMore";
 
 export class InterviewApiError extends Error {
   code: string;
@@ -78,6 +114,33 @@ export async function createInterviewSession(
     throw new InterviewApiError(
       "network",
       "Unable to reach the interview service. Is the API running?",
+    );
+  }
+}
+
+export async function listInterviewSessions(
+  params: ListInterviewSessionsParams = {},
+): Promise<InterviewSessionListResponse> {
+  const path = buildListInterviewSessionsPath(params);
+
+  try {
+    // Explicit GET — must match FastAPI `GET /api/v1/interviews` (not POST create).
+    return await apiFetch<InterviewSessionListResponse>(path, {
+      method: "GET",
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const code = mapListInterviewSessionsErrorCode(error.status);
+      const message = messageForListInterviewSessionsError(
+        code,
+        detailMessage(error.body, "Unable to load interview history."),
+      );
+      throw new InterviewApiError(code, message, error.status);
+    }
+    const code = mapListInterviewSessionsErrorCode(null);
+    throw new InterviewApiError(
+      code,
+      messageForListInterviewSessionsError(code),
     );
   }
 }

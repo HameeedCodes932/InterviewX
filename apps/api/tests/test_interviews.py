@@ -248,6 +248,107 @@ def test_complete_nonexistent_session_returns_404(client) -> None:
     assert response.status_code == 404
 
 
+def test_unauthenticated_cannot_list_sessions(client) -> None:
+    response = client.get("/api/v1/interviews")
+    assert response.status_code == 401
+
+
+def test_interviews_collection_registers_get_and_post(client) -> None:
+    """Regression: collection must expose GET list, not POST-only (405)."""
+    schema = client.get("/openapi.json").json()
+    methods = schema["paths"]["/api/v1/interviews"]
+    assert "get" in methods
+    assert "post" in methods
+
+    auth = _register(client, email="list-methods@example.com")
+    listed = client.get(
+        "/api/v1/interviews",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert listed.status_code == 200
+    assert listed.json()["items"] == []
+
+
+def test_list_returns_empty_for_new_user(client) -> None:
+    auth = _register(client, email="list-empty@example.com")
+    response = client.get(
+        "/api/v1/interviews",
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"] == []
+    assert payload["total"] == 0
+    assert payload["limit"] == 20
+    assert payload["offset"] == 0
+
+
+def test_list_returns_only_own_sessions_newest_first(client) -> None:
+    owner = _register(client, email="list-owner@example.com")
+    other = _register(client, email="list-other@example.com")
+    first = _create_session(client, owner["access_token"])
+    second = _create_session(client, owner["access_token"])
+    _create_session(client, other["access_token"])
+
+    response = client.get(
+        "/api/v1/interviews",
+        headers=_auth_headers(owner["access_token"]),
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 2
+    assert len(payload["items"]) == 2
+    assert payload["items"][0]["id"] == second["id"]
+    assert payload["items"][1]["id"] == first["id"]
+    assert all(item["user_id"] == owner["user"]["id"] for item in payload["items"])
+
+
+def test_list_pagination(client) -> None:
+    auth = _register(client, email="list-page@example.com")
+    created_ids = [_create_session(client, auth["access_token"])["id"] for _ in range(3)]
+
+    page = client.get(
+        "/api/v1/interviews",
+        params={"limit": 2, "offset": 0},
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert page.status_code == 200
+    payload = page.json()
+    assert payload["total"] == 3
+    assert payload["limit"] == 2
+    assert payload["offset"] == 0
+    assert len(payload["items"]) == 2
+    assert payload["items"][0]["id"] == created_ids[2]
+    assert payload["items"][1]["id"] == created_ids[1]
+
+    next_page = client.get(
+        "/api/v1/interviews",
+        params={"limit": 2, "offset": 2},
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert next_page.status_code == 200
+    next_payload = next_page.json()
+    assert next_payload["total"] == 3
+    assert len(next_payload["items"]) == 1
+    assert next_payload["items"][0]["id"] == created_ids[0]
+
+
+def test_list_rejects_invalid_pagination(client) -> None:
+    auth = _register(client, email="list-bad-page@example.com")
+    too_large = client.get(
+        "/api/v1/interviews",
+        params={"limit": 51},
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert too_large.status_code == 422
+    negative = client.get(
+        "/api/v1/interviews",
+        params={"offset": -1},
+        headers=_auth_headers(auth["access_token"]),
+    )
+    assert negative.status_code == 422
+
+
 def test_complete_is_idempotent_and_preserves_timestamp(client) -> None:
     auth = _register(client, email="complete-idempotent@example.com")
     created = _create_session(client, auth["access_token"])

@@ -11,7 +11,11 @@ import {
 } from "@/lib/auth";
 import { LogoMark } from "./LogoMark";
 
-export function DashboardHeader() {
+type DashboardHeaderProps = {
+  active?: "dashboard" | "history";
+};
+
+export function DashboardHeader({ active = "dashboard" }: DashboardHeaderProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
@@ -72,28 +76,37 @@ export function DashboardHeader() {
         >
           <Link
             href="/dashboard"
-            className="rounded-full bg-ix-graphite px-3.5 py-1.5 text-sm font-medium text-white"
-            aria-current="page"
+            className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${
+              active === "dashboard"
+                ? "bg-ix-graphite text-white"
+                : "text-ix-charcoal/55 hover:bg-[#ecebe7] hover:text-ix-charcoal"
+            }`}
+            aria-current={active === "dashboard" ? "page" : undefined}
           >
             Dashboard
           </Link>
-          <span
-            className="rounded-full px-3.5 py-1.5 text-sm text-ix-charcoal/45"
-            title="My Interviews will arrive in a later task"
+          <Link
+            href="/dashboard/history"
+            className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${
+              active === "history"
+                ? "bg-ix-graphite text-white"
+                : "text-ix-charcoal/55 hover:bg-[#ecebe7] hover:text-ix-charcoal"
+            }`}
+            aria-current={active === "history" ? "page" : undefined}
           >
             My Interviews
-          </span>
+          </Link>
         </nav>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
         <nav className="sm:hidden" aria-label="Dashboard mobile">
           <Link
-            href="/dashboard"
+            href={active === "history" ? "/dashboard/history" : "/dashboard"}
             className="rounded-full bg-ix-graphite px-2.5 py-1 text-xs font-medium text-white"
             aria-current="page"
           >
-            Dashboard
+            {active === "history" ? "History" : "Dashboard"}
           </Link>
         </nav>
 
@@ -144,16 +157,17 @@ export function DashboardHeader() {
                   </p>
                 ) : null}
               </div>
-              <div
+              <Link
+                href="/dashboard/history"
                 role="menuitem"
-                className="border-b border-[#d9d6cf]/80 px-3.5 py-3 text-sm text-ix-charcoal/45"
-                aria-disabled="true"
+                className="block border-b border-[#d9d6cf]/80 px-3.5 py-3 text-left text-sm text-ix-charcoal transition hover:bg-[#ecebe7]"
+                onClick={() => setMenuOpen(false)}
               >
                 My Interviews
-                <span className="mt-0.5 block text-xs">
-                  Visual placeholder — coming in a later task.
+                <span className="mt-0.5 block text-xs text-ix-charcoal/45">
+                  Open your interview history.
                 </span>
-              </div>
+              </Link>
               <button
                 type="button"
                 role="menuitem"

@@ -2,6 +2,7 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { CategoryGrid } from "@/components/dashboard/CategoryGrid";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { HowItWorks } from "@/components/dashboard/HowItWorks";
+import { RecentInterviews } from "@/components/dashboard/RecentInterviews";
 import { WelcomeSection } from "@/components/dashboard/WelcomeSection";
 
 export default function DashboardPage() {
@@ -9,11 +10,12 @@ export default function DashboardPage() {
     <AuthGuard>
       <div className="ix-dashboard-shell relative min-h-dvh">
         <div className="mx-auto flex min-h-dvh w-full max-w-[1180px] flex-col px-3 py-4 min-[375px]:px-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
-          <DashboardHeader />
+          <DashboardHeader active="dashboard" />
 
           <main className="mt-5 flex flex-1 flex-col gap-7 sm:mt-6 sm:gap-8 lg:gap-9">
             <WelcomeSection />
             <CategoryGrid />
+            <RecentInterviews />
             <HowItWorks />
           </main>
 
