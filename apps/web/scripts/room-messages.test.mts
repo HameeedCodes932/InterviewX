@@ -206,6 +206,18 @@ assert.equal(
   "sending",
 );
 assert.equal(
+  completionBlockReason({
+    transcriptStatus: "ready",
+    messages: ordered,
+    aiGenerating: true,
+  }),
+  "generating",
+);
+assert.match(
+  messageForCompletionBlock("generating") ?? "",
+  /interviewer to finish/i,
+);
+assert.equal(
   canCompleteInterview({
     transcriptStatus: "ready",
     messages: ordered,

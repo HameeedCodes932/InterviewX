@@ -23,10 +23,15 @@ import {
   messageForCreateInterviewMessageError,
   messageForListInterviewMessagesError,
 } from "./messageError";
+import {
+  mapRespondInterviewErrorCode,
+  messageForRespondInterviewError,
+} from "./respondError";
 import type {
   InterviewMessage,
   InterviewMessageCreateRequest,
   InterviewMessageListResponse,
+  InterviewRespondRequest,
   InterviewSession,
   InterviewSessionCreateRequest,
   InterviewSessionListResponse,
@@ -42,6 +47,7 @@ export type {
   InterviewMessageCreateRequest,
   InterviewMessageListResponse,
   InterviewMessageSpeaker,
+  InterviewRespondRequest,
   InterviewSession,
   InterviewSessionCreateRequest,
   InterviewSessionListResponse,
@@ -96,6 +102,19 @@ export type {
   CreateInterviewMessageErrorCode,
   ListInterviewMessagesErrorCode,
 } from "./messageError";
+export {
+  mapRespondInterviewErrorCode,
+  messageForRespondInterviewError,
+} from "./respondError";
+export type { RespondInterviewErrorCode } from "./respondError";
+export {
+  beginAiGeneration,
+  canRequestAiTurn,
+  completeAiGeneration,
+  failAiGeneration,
+  isAiGenerating,
+} from "./aiTurn";
+export type { AiTurnState } from "./aiTurn";
 export {
   greetingClientMessageId,
   newClientMessageId,
@@ -290,6 +309,32 @@ export async function createInterviewMessage(
     throw new InterviewApiError(
       code,
       messageForCreateInterviewMessageError(code),
+    );
+  }
+}
+
+export async function respondInterviewTurn(
+  sessionId: string,
+  input: InterviewRespondRequest,
+): Promise<InterviewMessage> {
+  try {
+    return await apiFetch<InterviewMessage>(
+      `/interviews/${sessionId}/respond`,
+      { method: "POST", body: input },
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const code = mapRespondInterviewErrorCode(error.status);
+      const message = messageForRespondInterviewError(
+        code,
+        detailMessage(error.body, "Unable to generate the interviewer response."),
+      );
+      throw new InterviewApiError(code, message, error.status);
+    }
+    const code = mapRespondInterviewErrorCode(null);
+    throw new InterviewApiError(
+      code,
+      messageForRespondInterviewError(code),
     );
   }
 }

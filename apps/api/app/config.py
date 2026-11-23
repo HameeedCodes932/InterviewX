@@ -49,6 +49,16 @@ class Settings(BaseSettings):
         alias="ACCESS_TOKEN_EXPIRE_MINUTES",
     )
 
+    # OpenAI-compatible chat completions (Groq by default).
+    llm_provider: str = Field(default="groq", alias="LLM_PROVIDER")
+    llm_api_key: str = Field(default="", alias="LLM_API_KEY")
+    llm_base_url: str = Field(
+        default="https://api.groq.com/openai/v1",
+        alias="LLM_BASE_URL",
+    )
+    llm_model: str = Field(default="", alias="LLM_MODEL")
+    llm_timeout_seconds: float = Field(default=45.0, alias="LLM_TIMEOUT_SECONDS")
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

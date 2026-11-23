@@ -127,6 +127,7 @@ export type CompletionBlockReason =
   | "transcript_loading"
   | "transcript_error"
   | "sending"
+  | "generating"
   | "saving"
   | "failed"
   | null;
@@ -136,6 +137,8 @@ export type CompletionGuardInput = {
   messages: RoomMessage[];
   /** Synchronous in-flight send lock (ref.current). */
   sendInFlight?: boolean;
+  /** AI interviewer reply currently generating. */
+  aiGenerating?: boolean;
 };
 
 /** Why ending an in-progress interview must wait (null = safe to complete). */
@@ -145,6 +148,7 @@ export function completionBlockReason(
   if (input.transcriptStatus === "loading") return "transcript_loading";
   if (input.transcriptStatus === "error") return "transcript_error";
   if (input.sendInFlight) return "sending";
+  if (input.aiGenerating) return "generating";
   if (hasPendingSave(input.messages)) return "saving";
   if (hasFailedSave(input.messages)) return "failed";
   return null;
@@ -164,6 +168,8 @@ export function messageForCompletionBlock(
       return "The conversation could not be loaded. Retry loading before ending the interview.";
     case "sending":
       return "Wait for the current message to finish saving before ending the interview.";
+    case "generating":
+      return "Wait for the interviewer to finish responding before ending the interview.";
     case "saving":
       return "Wait for all messages to finish saving before ending the interview.";
     case "failed":
@@ -177,9 +183,11 @@ export function canSubmitCandidateReply(options: {
   isCompleted: boolean;
   draft: string;
   messages: RoomMessage[];
+  aiGenerating?: boolean;
 }): boolean {
   if (options.isCompleted) return false;
   if (!options.draft.trim()) return false;
+  if (options.aiGenerating) return false;
   if (hasPendingSave(options.messages)) return false;
   return true;
 }
