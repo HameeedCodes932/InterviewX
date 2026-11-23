@@ -126,3 +126,9 @@ class InterviewMessageResponse(BaseModel):
 
 class InterviewMessageListResponse(BaseModel):
     items: list[InterviewMessageResponse]
+
+
+class InterviewRespondRequest(BaseModel):
+    """Request an AI interviewer reply for an already-persisted candidate message."""
+
+    candidate_client_message_id: UUID

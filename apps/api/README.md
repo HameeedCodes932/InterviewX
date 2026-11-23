@@ -1,8 +1,8 @@
 # InterviewX API
 
-FastAPI + PostgreSQL backend foundation for InterviewX.
+FastAPI + PostgreSQL backend for InterviewX.
 
-This package provides configuration, database connectivity, Alembic migrations, and health endpoints. Authentication, AI, and interview engines are intentionally **not** implemented here.
+This package provides configuration, database connectivity, Alembic migrations, authentication, interview sessions/messages, and the first AI interviewer turn endpoint (OpenAI-compatible chat completions; Groq by default).
 
 ## Required software (Windows 11)
 
@@ -160,8 +160,43 @@ Both require `Authorization: Bearer <access_token>`. Ownership is always taken f
 | `POST` | `/api/v1/interviews/{session_id}/complete` | Mark own session completed (idempotent) |
 | `GET` | `/api/v1/interviews/{session_id}/messages` | List conversation messages in order |
 | `POST` | `/api/v1/interviews/{session_id}/messages` | Persist a message (201; idempotent on `client_message_id`) |
+| `POST` | `/api/v1/interviews/{session_id}/respond` | Generate + persist AI interviewer reply for a candidate turn |
 
 Messages require a `client_message_id` (UUID) for safe retries. Writes to completed sessions return **409**. Content max length is **8000** characters after trim.
+
+### AI interviewer (`/respond`)
+
+Request body:
+
+```json
+{
+  "candidate_client_message_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+}
+```
+
+Behavior:
+
+1. Verifies session ownership.
+2. Rejects completed sessions (**409**).
+3. Requires the referenced message to exist in this session and be a `candidate` message.
+4. Builds prompt context from the **persisted** transcript (not client-supplied history).
+5. Calls the configured OpenAI-compatible provider.
+6. Persists the interviewer reply with a deterministic `client_message_id` derived from the session + candidate message IDs (idempotent retries / concurrent calls return the same row).
+7. Returns the persisted `InterviewMessageResponse` (**201**).
+
+The database row lock is **not** held during the external LLM request. Provider failures do not create an interviewer message.
+
+Configure AI in `.env` (see `.env.example`):
+
+```env
+LLM_PROVIDER=groq
+LLM_API_KEY=<your Groq API key>
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_MODEL=<a currently available Groq chat model>
+LLM_TIMEOUT_SECONDS=45
+```
+
+`LLM_API_KEY` must stay on the API server only — never put it in frontend env vars. Missing configuration returns **503** with a clear message (no fake responses). Rate limits return **429**; provider/timeouts return **502**.
 
 List pagination: `limit` defaults to `20` (max `50`), `offset` defaults to `0`. Response shape:
 

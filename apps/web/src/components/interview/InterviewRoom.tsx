@@ -13,22 +13,28 @@ import { LogoMark } from "@/components/dashboard/LogoMark";
 import {
   DEFAULT_INTERVIEW_GREETING,
   InterviewApiError,
+  beginAiGeneration,
   beginOptimisticMessage,
   canCompleteInterview,
   canSubmitCandidateReply,
+  completeAiGeneration,
   completeInterviewSession,
   completeMessageSave,
   completionBlockReason,
   createInterviewMessage,
+  failAiGeneration,
   failMessageSave,
   getInterviewSession,
   greetingClientMessageId,
   hasPendingSave,
+  isAiGenerating,
   listInterviewMessages,
   markMessageSaving,
   messageForCompletionBlock,
   messagesFromApi,
   newClientMessageId,
+  respondInterviewTurn,
+  type AiTurnState,
   type InterviewSession,
   type RoomMessage,
 } from "@/lib/interviews";
@@ -81,9 +87,11 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [aiTurn, setAiTurn] = useState<AiTurnState>({ status: "idle" });
   const transcriptRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
   const sendInFlight = useRef(false);
+  const aiInFlight = useRef(false);
   const inputId = useId();
 
   useEffect(() => {
@@ -275,12 +283,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const experience = session.experience_level as ExperienceLevelId;
   const difficulty = session.difficulty as DifficultyId;
   const duration = session.duration_minutes as DurationMinutes;
+  const aiBusy = isAiGenerating(aiTurn);
   const transcriptBusy =
-    transcript.status === "loading" || hasPendingSave(messages);
+    transcript.status === "loading" || hasPendingSave(messages) || aiBusy;
   const completionGuard = {
     transcriptStatus: transcript.status,
     messages,
     sendInFlight: sendInFlight.current,
+    aiGenerating: aiBusy || aiInFlight.current,
   };
   const endBlockReason = isCompleted
     ? null
@@ -299,6 +309,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
       transcriptStatus: transcript.status,
       messages,
       sendInFlight: sendInFlight.current,
+      aiGenerating: aiBusy || aiInFlight.current,
     };
     if (!canCompleteInterview(guard)) {
       setEndError(
@@ -346,9 +357,44 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     }
   }
 
+  async function requestAiResponse(candidateClientMessageId: string) {
+    if (isCompleted || ending) return;
+    if (aiInFlight.current) return;
+
+    aiInFlight.current = true;
+    setAiTurn(beginAiGeneration(candidateClientMessageId));
+    try {
+      const reply = await respondInterviewTurn(sessionId, {
+        candidate_client_message_id: candidateClientMessageId,
+      });
+      setMessages((current) => completeMessageSave(current, reply));
+      setAiTurn(completeAiGeneration());
+    } catch (error: unknown) {
+      if (
+        error instanceof InterviewApiError &&
+        error.code === "unauthenticated"
+      ) {
+        router.replace("/login");
+        return;
+      }
+      setAiTurn(
+        failAiGeneration(
+          candidateClientMessageId,
+          error instanceof InterviewApiError
+            ? error.message
+            : "Unable to generate the interviewer response.",
+        ),
+      );
+    } finally {
+      aiInFlight.current = false;
+    }
+  }
+
   async function submitMessage(event: FormEvent) {
     event.preventDefault();
-    if (isCompleted || ending || sendInFlight.current) return;
+    if (isCompleted || ending || sendInFlight.current || aiInFlight.current) {
+      return;
+    }
     if (transcript.status !== "ready") return;
 
     const text = draft.trim();
@@ -357,6 +403,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
         isCompleted,
         draft: text,
         messages,
+        aiGenerating: aiBusy,
       })
     ) {
       if (!text) setDraftError("Enter a response before sending.");
@@ -367,6 +414,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     sendInFlight.current = true;
     setDraftError(null);
     setDraft("");
+    setAiTurn(completeAiGeneration());
     setMessages((current) =>
       beginOptimisticMessage(current, {
         clientMessageId,
@@ -376,31 +424,47 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     );
 
     try {
-      await persistMessage({
+      const saved = await persistMessage({
         clientMessageId,
         speaker: "candidate",
         text,
       });
+      sendInFlight.current = false;
+      if (saved) {
+        await requestAiResponse(clientMessageId);
+      }
     } finally {
       sendInFlight.current = false;
     }
   }
 
   async function retryFailedMessage(message: RoomMessage) {
-    if (isCompleted || ending || sendInFlight.current) return;
+    if (isCompleted || ending || sendInFlight.current || aiInFlight.current) {
+      return;
+    }
     if (message.status !== "failed") return;
 
     sendInFlight.current = true;
     setMessages((current) => markMessageSaving(current, message.clientMessageId));
     try {
-      await persistMessage({
+      const saved = await persistMessage({
         clientMessageId: message.clientMessageId,
         speaker: message.speaker,
         text: message.text,
       });
+      sendInFlight.current = false;
+      if (saved && message.speaker === "candidate") {
+        await requestAiResponse(message.clientMessageId);
+      }
     } finally {
       sendInFlight.current = false;
     }
+  }
+
+  async function retryAiGeneration() {
+    if (aiTurn.status !== "error") return;
+    if (isCompleted || ending) return;
+    await requestAiResponse(aiTurn.candidateClientMessageId);
   }
 
   function toggleMic() {
@@ -430,6 +494,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
       transcriptStatus: transcript.status,
       messages,
       sendInFlight: sendInFlight.current,
+      aiGenerating: aiBusy || aiInFlight.current,
     };
     const block = completionBlockReason(guard);
     if (block !== null) {
@@ -448,6 +513,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
         transcriptStatus: transcript.status,
         messages,
         sendInFlight: sendInFlight.current,
+        aiGenerating: aiInFlight.current,
       };
       if (!canCompleteInterview(latestGuard)) {
         setEnding(false);
@@ -644,7 +710,9 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                   ? "Loading transcript…"
                   : isCompleted
                     ? "Read-only transcript"
-                    : "Saved to your account"}
+                    : aiBusy
+                      ? "Interviewer thinking…"
+                      : "Saved to your account"}
               </span>
             </div>
 
@@ -713,6 +781,39 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                   ) : null}
                 </div>
               ))}
+              {aiBusy ? (
+                <div
+                  className="max-w-[95%] self-start rounded-[1rem] border border-[#cfc9e8] bg-[#eef0fb] px-3.5 py-2.5 text-sm text-ix-charcoal/70"
+                  role="status"
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ix-charcoal/45">
+                    AI Interviewer
+                  </p>
+                  <p className="mt-1">Thinking of a follow-up question…</p>
+                </div>
+              ) : null}
+              {aiTurn.status === "error" ? (
+                <div
+                  className="rounded-[1rem] border border-[#d8c2c2] bg-[#fbf5f5] px-3.5 py-3"
+                  role="alert"
+                >
+                  <p className="text-sm text-red-800">{aiTurn.message}</p>
+                  <p className="mt-1 text-[12px] text-ix-charcoal/55">
+                    Your answer is already saved. Retry generation without
+                    sending it again.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-2 rounded-full bg-ix-graphite px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                    onClick={() => {
+                      void retryAiGeneration();
+                    }}
+                    disabled={ending || isCompleted}
+                  >
+                    Retry interviewer response
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <form
@@ -733,7 +834,9 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 placeholder={
                   isCompleted
                     ? "This session is completed."
-                    : "Type your response…"
+                    : aiBusy
+                      ? "Wait for the interviewer to finish…"
+                      : "Type your response…"
                 }
                 className={`ix-field resize-y ${
                   isCompleted ? "min-h-[3.25rem]" : "min-h-[5.5rem]"
@@ -756,7 +859,9 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 <p className="text-[12px] text-ix-charcoal/50">
                   {isCompleted
                     ? "Completed sessions are read-only."
-                    : "Answers are saved to the server. No AI reply is generated yet."}
+                    : aiBusy
+                      ? "Generating the next interviewer question…"
+                      : "Answers are saved first, then the AI interviewer responds."}
                 </p>
               </div>
             </form>

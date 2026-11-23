@@ -62,3 +62,7 @@ export type InterviewMessageCreateRequest = {
   content: string;
   client_message_id: string;
 };
+
+export type InterviewRespondRequest = {
+  candidate_client_message_id: string;
+};

@@ -12,9 +12,14 @@ from app.schemas.interview import (
     InterviewMessageCreate,
     InterviewMessageListResponse,
     InterviewMessageResponse,
+    InterviewRespondRequest,
     InterviewSessionCreate,
     InterviewSessionListResponse,
     InterviewSessionResponse,
+)
+from app.services.interview_ai import (
+    InterviewAiError,
+    generate_owned_interview_response,
 )
 from app.services.interview_messages import (
     InterviewMessageError,
@@ -174,6 +179,63 @@ def create_message(
         if exc.code == "conflict":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
+                detail=exc.message,
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.message,
+        ) from exc
+    return InterviewMessageResponse.model_validate(message)
+
+
+@router.post(
+    "/{session_id}/respond",
+    response_model=InterviewMessageResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate AI interviewer response",
+)
+def respond_to_candidate(
+    session_id: UUID,
+    payload: InterviewRespondRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InterviewMessageResponse:
+    try:
+        message = generate_owned_interview_response(
+            db,
+            user=current_user,
+            session_id=session_id,
+            candidate_client_message_id=payload.candidate_client_message_id,
+        )
+    except InterviewAiError as exc:
+        if exc.code == "not_found" or exc.code == "candidate_not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=exc.message,
+            ) from exc
+        if exc.code in {"completed", "conflict"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=exc.message,
+            ) from exc
+        if exc.code == "invalid_candidate":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=exc.message,
+            ) from exc
+        if exc.code == "not_configured":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=exc.message,
+            ) from exc
+        if exc.code == "rate_limited":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=exc.message,
+            ) from exc
+        if exc.code in {"timeout", "unavailable", "auth", "invalid_response"}:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=exc.message,
             ) from exc
         raise HTTPException(
