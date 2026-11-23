@@ -13,7 +13,8 @@
     "test:complete-errors": "node --experimental-strip-types scripts/complete-session-errors.test.mts",
     "test:interview-display": "node --experimental-strip-types scripts/interview-display.test.mts",
     "test:history-load-more": "node --experimental-strip-types scripts/history-load-more.test.mts",
-    "test:run-history-load-more": "node --experimental-strip-types scripts/run-history-load-more.test.mts"
+    "test:run-history-load-more": "node --experimental-strip-types scripts/run-history-load-more.test.mts",
+    "test:room-messages": "node --experimental-strip-types scripts/room-messages.test.mts"
   },
   "dependencies": {
     "next": "^16.4.6",

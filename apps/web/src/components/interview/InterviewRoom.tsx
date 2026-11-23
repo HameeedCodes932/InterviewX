@@ -11,10 +11,26 @@ import {
 } from "react";
 import { LogoMark } from "@/components/dashboard/LogoMark";
 import {
+  DEFAULT_INTERVIEW_GREETING,
   InterviewApiError,
+  beginOptimisticMessage,
+  canCompleteInterview,
+  canSubmitCandidateReply,
   completeInterviewSession,
+  completeMessageSave,
+  completionBlockReason,
+  createInterviewMessage,
+  failMessageSave,
   getInterviewSession,
+  greetingClientMessageId,
+  hasPendingSave,
+  listInterviewMessages,
+  markMessageSaving,
+  messageForCompletionBlock,
+  messagesFromApi,
+  newClientMessageId,
   type InterviewSession,
+  type RoomMessage,
 } from "@/lib/interviews";
 import {
   difficultyLabel,
@@ -27,15 +43,6 @@ import type {
   ExperienceLevelId,
 } from "./setupOptions";
 
-type ChatMessage = {
-  id: string;
-  speaker: "interviewer" | "candidate";
-  text: string;
-};
-
-const GREETING =
-  "Hello! Welcome to your Software Engineering interview. Let's start by getting to know you. Could you briefly introduce yourself and tell me about your technical background?";
-
 type InterviewRoomProps = {
   sessionId: string;
 };
@@ -45,6 +52,11 @@ type LoadState =
   | { status: "ready"; session: InterviewSession }
   | { status: "not_found"; message: string }
   | { status: "network"; message: string };
+
+type TranscriptState =
+  | { status: "loading" }
+  | { status: "ready" }
+  | { status: "error"; message: string };
 
 export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const router = useRouter();
@@ -56,9 +68,10 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     setTrackedKey(requestKey);
     setLoad({ status: "loading" });
   }
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: "greeting", speaker: "interviewer", text: GREETING },
-  ]);
+  const [transcript, setTranscript] = useState<TranscriptState>({
+    status: "loading",
+  });
+  const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState<string | null>(null);
   const [micOn, setMicOn] = useState(false);
@@ -70,22 +83,22 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
+  const sendInFlight = useRef(false);
   const inputId = useId();
 
   useEffect(() => {
     let cancelled = false;
+    setTranscript({ status: "loading" });
+    setMessages([]);
 
-    getInterviewSession(sessionId)
-      .then((session) => {
-        if (!cancelled) setLoad({ status: "ready", session });
-      })
-      .catch((error: unknown) => {
+    async function loadRoom() {
+      let session: InterviewSession;
+      try {
+        session = await getInterviewSession(sessionId);
+      } catch (error: unknown) {
         if (cancelled) return;
         if (error instanceof InterviewApiError && error.code === "not_found") {
-          setLoad({
-            status: "not_found",
-            message: error.message,
-          });
+          setLoad({ status: "not_found", message: error.message });
           return;
         }
         if (
@@ -102,7 +115,57 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               ? error.message
               : "Unable to load the interview session.",
         });
-      });
+        return;
+      }
+
+      if (cancelled) return;
+      setLoad({ status: "ready", session });
+
+      try {
+        const listed = await listInterviewMessages(sessionId);
+        if (cancelled) return;
+
+        let nextMessages = messagesFromApi(listed.items);
+        if (nextMessages.length === 0 && session.status !== "completed") {
+          const greetingId = greetingClientMessageId(sessionId);
+          setMessages(
+            beginOptimisticMessage([], {
+              clientMessageId: greetingId,
+              speaker: "interviewer",
+              text: DEFAULT_INTERVIEW_GREETING,
+            }),
+          );
+          const saved = await createInterviewMessage(sessionId, {
+            speaker: "interviewer",
+            content: DEFAULT_INTERVIEW_GREETING,
+            client_message_id: greetingId,
+          });
+          if (cancelled) return;
+          nextMessages = messagesFromApi([saved]);
+        }
+
+        setMessages(nextMessages);
+        setTranscript({ status: "ready" });
+      } catch (error: unknown) {
+        if (cancelled) return;
+        if (
+          error instanceof InterviewApiError &&
+          error.code === "unauthenticated"
+        ) {
+          router.replace("/login");
+          return;
+        }
+        setTranscript({
+          status: "error",
+          message:
+            error instanceof InterviewApiError
+              ? error.message
+              : "Unable to load the conversation.",
+        });
+      }
+    }
+
+    void loadRoom();
 
     return () => {
       cancelled = true;
@@ -112,8 +175,12 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   useEffect(() => {
     const el = transcriptRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    // Completed rooms are for reading history — keep the start visible.
+    // In-progress rooms keep chat-style stick-to-latest behavior.
+    const completed =
+      load.status === "ready" && load.session.status === "completed";
+    el.scrollTop = completed ? 0 : el.scrollHeight;
+  }, [messages, load]);
 
   useEffect(() => {
     function syncFullscreen() {
@@ -208,25 +275,132 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
   const experience = session.experience_level as ExperienceLevelId;
   const difficulty = session.difficulty as DifficultyId;
   const duration = session.duration_minutes as DurationMinutes;
+  const transcriptBusy =
+    transcript.status === "loading" || hasPendingSave(messages);
+  const completionGuard = {
+    transcriptStatus: transcript.status,
+    messages,
+    sendInFlight: sendInFlight.current,
+  };
+  const endBlockReason = isCompleted
+    ? null
+    : completionBlockReason(completionGuard);
+  const endBlocked = endBlockReason !== null;
+  const endBlockedMessage = messageForCompletionBlock(endBlockReason);
 
-  function submitMessage(event: FormEvent) {
-    event.preventDefault();
-    if (isCompleted) return;
-    const text = draft.trim();
-    if (!text) {
-      setDraftError("Enter a response before sending.");
+  function requestEndInterview() {
+    if (ending) return;
+    if (session.status === "completed") {
+      setEndError(null);
+      setConfirmExit(true);
       return;
     }
+    const guard = {
+      transcriptStatus: transcript.status,
+      messages,
+      sendInFlight: sendInFlight.current,
+    };
+    if (!canCompleteInterview(guard)) {
+      setEndError(
+        messageForCompletionBlock(completionBlockReason(guard)) ??
+          "Save all messages before ending the interview.",
+      );
+      setConfirmExit(true);
+      return;
+    }
+    setEndError(null);
+    setConfirmExit(true);
+  }
+
+  async function persistMessage(input: {
+    clientMessageId: string;
+    speaker: "interviewer" | "candidate";
+    text: string;
+  }) {
+    try {
+      const saved = await createInterviewMessage(sessionId, {
+        speaker: input.speaker,
+        content: input.text,
+        client_message_id: input.clientMessageId,
+      });
+      setMessages((current) => completeMessageSave(current, saved));
+      return true;
+    } catch (error: unknown) {
+      if (
+        error instanceof InterviewApiError &&
+        error.code === "unauthenticated"
+      ) {
+        router.replace("/login");
+        return false;
+      }
+      setMessages((current) =>
+        failMessageSave(
+          current,
+          input.clientMessageId,
+          error instanceof InterviewApiError
+            ? error.message
+            : "Unable to save the message.",
+        ),
+      );
+      return false;
+    }
+  }
+
+  async function submitMessage(event: FormEvent) {
+    event.preventDefault();
+    if (isCompleted || ending || sendInFlight.current) return;
+    if (transcript.status !== "ready") return;
+
+    const text = draft.trim();
+    if (
+      !canSubmitCandidateReply({
+        isCompleted,
+        draft: text,
+        messages,
+      })
+    ) {
+      if (!text) setDraftError("Enter a response before sending.");
+      return;
+    }
+
+    const clientMessageId = newClientMessageId();
+    sendInFlight.current = true;
     setDraftError(null);
-    setMessages((current) => [
-      ...current,
-      {
-        id: `candidate-${Date.now()}`,
+    setDraft("");
+    setMessages((current) =>
+      beginOptimisticMessage(current, {
+        clientMessageId,
         speaker: "candidate",
         text,
-      },
-    ]);
-    setDraft("");
+      }),
+    );
+
+    try {
+      await persistMessage({
+        clientMessageId,
+        speaker: "candidate",
+        text,
+      });
+    } finally {
+      sendInFlight.current = false;
+    }
+  }
+
+  async function retryFailedMessage(message: RoomMessage) {
+    if (isCompleted || ending || sendInFlight.current) return;
+    if (message.status !== "failed") return;
+
+    sendInFlight.current = true;
+    setMessages((current) => markMessageSaving(current, message.clientMessageId));
+    try {
+      await persistMessage({
+        clientMessageId: message.clientMessageId,
+        speaker: message.speaker,
+        text: message.text,
+      });
+    } finally {
+      sendInFlight.current = false;
+    }
   }
 
   function toggleMic() {
@@ -252,9 +426,37 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
       return;
     }
 
+    const guard = {
+      transcriptStatus: transcript.status,
+      messages,
+      sendInFlight: sendInFlight.current,
+    };
+    const block = completionBlockReason(guard);
+    if (block !== null) {
+      setEndError(
+        messageForCompletionBlock(block) ??
+          "Save all messages before ending the interview.",
+      );
+      return;
+    }
+
     setEnding(true);
     setEndError(null);
     try {
+      // Re-check immediately before the network call in case a save started.
+      const latestGuard = {
+        transcriptStatus: transcript.status,
+        messages,
+        sendInFlight: sendInFlight.current,
+      };
+      if (!canCompleteInterview(latestGuard)) {
+        setEnding(false);
+        setEndError(
+          messageForCompletionBlock(completionBlockReason(latestGuard)) ??
+            "Save all messages before ending the interview.",
+        );
+        return;
+      }
       const updated = await completeInterviewSession(sessionId);
       setLoad({ status: "ready", session: updated });
       setConfirmExit(false);
@@ -297,12 +499,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
     <div
       ref={roomRef}
       className={`ix-dashboard-shell relative min-h-dvh ${
-        isFullscreen ? "h-dvh overflow-y-auto" : ""
+        isFullscreen
+          ? "h-dvh overflow-y-auto"
+          : "lg:h-dvh lg:overflow-hidden"
       }`}
       data-fullscreen-target="interview-room"
     >
-      <div className="mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col px-3 py-3 min-[375px]:px-4 sm:px-6 sm:py-4 lg:px-8 lg:py-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#bdb8ae]/80 pb-3">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col px-3 py-3 min-[375px]:px-4 sm:px-6 sm:py-4 lg:h-full lg:min-h-0 lg:overflow-hidden lg:px-8 lg:py-5">
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#bdb8ae]/80 pb-3">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/dashboard"
@@ -340,12 +544,14 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             </button>
             <button
               type="button"
-              className="rounded-full border border-[#b7b2a7] bg-[#ecebe7] px-3 py-1.5 text-sm font-medium text-ix-charcoal transition hover:bg-[#e3e2dd]"
-              onClick={() => {
-                setEndError(null);
-                setConfirmExit(true);
-              }}
-              disabled={ending}
+              className="rounded-full border border-[#b7b2a7] bg-[#ecebe7] px-3 py-1.5 text-sm font-medium text-ix-charcoal transition hover:bg-[#e3e2dd] disabled:opacity-60"
+              onClick={requestEndInterview}
+              disabled={ending || (!isCompleted && endBlocked)}
+              title={
+                !isCompleted && endBlockedMessage
+                  ? endBlockedMessage
+                  : undefined
+              }
             >
               {isCompleted ? "Leave room" : "Exit interview"}
             </button>
@@ -354,7 +560,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
 
         {isCompleted ? (
           <div
-            className="mt-3 rounded-ix-sm border border-ix-indigo/25 bg-[#f7f6fb] px-3.5 py-3 text-sm text-ix-charcoal/75"
+            className="mt-3 shrink-0 rounded-ix-sm border border-ix-indigo/25 bg-[#f7f6fb] px-3.5 py-3 text-sm text-ix-charcoal/75"
             role="status"
           >
             This interview session is already completed. Conversation controls
@@ -363,8 +569,8 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
           </div>
         ) : null}
 
-        <main className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:gap-5">
-          <section className="ix-room-stage flex min-h-0 flex-col">
+        <main className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-5 lg:overflow-hidden">
+          <section className="ix-room-stage flex h-full min-h-0 flex-col">
             <div className="relative overflow-hidden rounded-[1.15rem] bg-[#1c1e24]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -428,24 +634,50 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             </aside>
           </section>
 
-          <section className="ix-room-chat flex min-h-0 flex-col">
-            <div className="flex items-center justify-between gap-2 border-b border-[#cfcbc3] px-1 pb-2">
+          <section className="ix-room-chat flex h-full min-h-0 flex-col">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#cfcbc3] px-1 pb-2">
               <h2 className="font-display text-[1.15rem] tracking-tight text-ix-graphite">
                 Conversation
               </h2>
               <span className="text-[11px] font-medium text-ix-charcoal/50">
-                Local simulation
+                {transcript.status === "loading"
+                  ? "Loading transcript…"
+                  : isCompleted
+                    ? "Read-only transcript"
+                    : "Saved to your account"}
               </span>
             </div>
 
             <div
               ref={transcriptRef}
-              className="mt-3 flex min-h-[220px] flex-1 flex-col gap-3 overflow-y-auto pr-1 sm:min-h-[260px] lg:min-h-0"
+              className="mt-3 flex min-h-[220px] flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-1 sm:min-h-[260px] lg:min-h-[min(40vh,24rem)]"
               aria-live="polite"
             >
+              {transcript.status === "loading" ? (
+                <p className="text-sm text-ix-charcoal/55">
+                  Loading saved conversation…
+                </p>
+              ) : null}
+              {transcript.status === "error" ? (
+                <div className="rounded-[1rem] border border-[#d8c2c2] bg-[#fbf5f5] px-3.5 py-3">
+                  <p className="text-sm text-red-800">{transcript.message}</p>
+                  <button
+                    type="button"
+                    className="mt-2 rounded-full bg-ix-graphite px-4 py-2 text-sm font-medium text-white"
+                    onClick={() => setRetryToken((value) => value + 1)}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : null}
+              {transcript.status === "ready" && messages.length === 0 ? (
+                <p className="text-sm text-ix-charcoal/55">
+                  No messages were saved for this session.
+                </p>
+              ) : null}
               {messages.map((message) => (
                 <div
-                  key={message.id}
+                  key={message.clientMessageId}
                   className={`max-w-[95%] rounded-[1rem] px-3.5 py-2.5 text-sm leading-relaxed ${
                     message.speaker === "interviewer"
                       ? "self-start border border-[#cfc9e8] bg-[#eef0fb] text-ix-charcoal"
@@ -458,17 +690,41 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                       : "You"}
                   </p>
                   <p className="mt-1">{message.text}</p>
+                  {message.status === "saving" ? (
+                    <p className="mt-1.5 text-[11px] text-ix-charcoal/50">
+                      Saving…
+                    </p>
+                  ) : null}
+                  {message.status === "failed" ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] text-red-800" role="alert">
+                        {message.error ?? "Save failed."}
+                      </p>
+                      <button
+                        type="button"
+                        className="rounded-full bg-ix-graphite px-3 py-1 text-[11px] font-medium text-white"
+                        onClick={() => {
+                          void retryFailedMessage(message);
+                        }}
+                      >
+                        Retry save
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
 
-            <form className="mt-3 border-t border-[#cfcbc3] pt-3" onSubmit={submitMessage}>
+            <form
+              className="mt-3 shrink-0 border-t border-[#cfcbc3] pt-3"
+              onSubmit={submitMessage}
+            >
               <label htmlFor={inputId} className="sr-only">
                 Your response
               </label>
               <textarea
                 id={inputId}
-                rows={3}
+                rows={isCompleted ? 2 : 3}
                 value={draft}
                 onChange={(event) => {
                   setDraft(event.target.value);
@@ -479,8 +735,10 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                     ? "This session is completed."
                     : "Type your response…"
                 }
-                className="ix-field min-h-[5.5rem] resize-y"
-                disabled={isCompleted || ending}
+                className={`ix-field resize-y ${
+                  isCompleted ? "min-h-[3.25rem]" : "min-h-[5.5rem]"
+                }`}
+                disabled={isCompleted || ending || transcriptBusy}
               />
               {draftError ? (
                 <p className="mt-1.5 text-sm text-red-800" role="alert">
@@ -491,17 +749,19 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 <button
                   type="submit"
                   className="ix-btn-primary !w-auto px-5 !py-2.5 text-sm"
-                  disabled={isCompleted || ending}
+                  disabled={isCompleted || ending || transcriptBusy}
                 >
-                  Send response
+                  {hasPendingSave(messages) ? "Saving…" : "Send response"}
                 </button>
                 <p className="text-[12px] text-ix-charcoal/50">
-                  Messages stay on this page only — no AI reply is generated.
+                  {isCompleted
+                    ? "Completed sessions are read-only."
+                    : "Answers are saved to the server. No AI reply is generated yet."}
                 </p>
               </div>
             </form>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#cfcbc3] pt-3">
+            <div className="mt-3 flex shrink-0 flex-wrap items-center gap-2 border-t border-[#cfcbc3] pt-3">
               <button
                 type="button"
                 className={`rounded-full border px-3.5 py-2 text-sm font-medium transition ${
@@ -541,15 +801,22 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
               <button
                 type="button"
                 className="rounded-full border border-[#b45a5a]/40 bg-[#f8ecec] px-3.5 py-2 text-sm font-medium text-[#7a3030] transition hover:bg-[#f3e0e0] disabled:opacity-60"
-                onClick={() => {
-                  setEndError(null);
-                  setConfirmExit(true);
-                }}
-                disabled={ending}
+                onClick={requestEndInterview}
+                disabled={ending || (!isCompleted && endBlocked)}
+                title={
+                  !isCompleted && endBlockedMessage
+                    ? endBlockedMessage
+                    : undefined
+                }
               >
                 {isCompleted ? "Leave room" : "End Interview"}
               </button>
             </div>
+            {!isCompleted && endBlockedMessage ? (
+              <p className="mt-2 text-[12px] text-[#7a3030]" role="status">
+                {endBlockedMessage}
+              </p>
+            ) : null}
 
             {deviceNotice ? (
               <p
@@ -566,7 +833,7 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
           </section>
         </main>
 
-        <footer className="mt-4 shrink-0 border-t border-[#c9c5bc]/80 pt-3 text-center text-[11px] text-ix-charcoal/45 sm:text-left">
+        <footer className="mt-4 shrink-0 border-t border-[#c9c5bc]/80 pt-3 text-center text-[11px] text-ix-charcoal/45 lg:mt-3 sm:text-left">
           © {new Date().getFullYear()} InterviewX
         </footer>
       </div>
@@ -588,8 +855,13 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
             <p className="mt-2 text-sm leading-relaxed text-ix-charcoal/65">
               {isCompleted
                 ? "This session is already marked completed. You will return to the dashboard."
-                : "This will mark the interview session as completed and return you to the dashboard. Conversation messages stay local on this page."}
+                : "This will mark the interview session as completed and return you to the dashboard. Messages already saved on the server remain available when you reopen this interview."}
             </p>
+            {endBlockedMessage ? (
+              <p className="mt-3 text-sm text-[#7a3030]" role="status">
+                {endBlockedMessage}
+              </p>
+            ) : null}
             {endError ? (
               <p className="mt-3 text-sm text-red-800" role="alert">
                 {endError}
@@ -614,10 +886,10 @@ export function InterviewRoom({ sessionId }: InterviewRoomProps) {
                 onClick={() => {
                   void confirmEnd();
                 }}
-                disabled={ending}
+                disabled={ending || (!isCompleted && endBlocked)}
               >
                 {ending
-                  ? "Saving…"
+                  ? "Ending…"
                   : isCompleted
                     ? "Return to dashboard"
                     : "End and return"}

@@ -9,9 +9,17 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.schemas.interview import (
+    InterviewMessageCreate,
+    InterviewMessageListResponse,
+    InterviewMessageResponse,
     InterviewSessionCreate,
     InterviewSessionListResponse,
     InterviewSessionResponse,
+)
+from app.services.interview_messages import (
+    InterviewMessageError,
+    create_owned_interview_message,
+    list_owned_interview_messages,
 )
 from app.services.interview_sessions import (
     DEFAULT_LIST_LIMIT,
@@ -106,3 +114,70 @@ def complete_session(
             detail="Interview session not found.",
         )
     return InterviewSessionResponse.model_validate(session)
+
+
+@router.get(
+    "/{session_id}/messages",
+    response_model=InterviewMessageListResponse,
+    summary="List interview messages",
+)
+def list_messages(
+    session_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InterviewMessageListResponse:
+    messages = list_owned_interview_messages(
+        db,
+        user=current_user,
+        session_id=session_id,
+    )
+    if messages is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview session not found.",
+        )
+    return InterviewMessageListResponse(
+        items=[InterviewMessageResponse.model_validate(item) for item in messages],
+    )
+
+
+@router.post(
+    "/{session_id}/messages",
+    response_model=InterviewMessageResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create interview message",
+)
+def create_message(
+    session_id: UUID,
+    payload: InterviewMessageCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InterviewMessageResponse:
+    try:
+        message = create_owned_interview_message(
+            db,
+            user=current_user,
+            session_id=session_id,
+            payload=payload,
+        )
+    except InterviewMessageError as exc:
+        if exc.code == "not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=exc.message,
+            ) from exc
+        if exc.code == "completed":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=exc.message,
+            ) from exc
+        if exc.code == "conflict":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=exc.message,
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.message,
+        ) from exc
+    return InterviewMessageResponse.model_validate(message)

@@ -40,3 +40,25 @@ export type ListInterviewSessionsParams = {
   limit?: number;
   offset?: number;
 };
+
+export type InterviewMessageSpeaker = "interviewer" | "candidate";
+
+export type InterviewMessage = {
+  id: string;
+  session_id: string;
+  speaker: InterviewMessageSpeaker;
+  content: string;
+  sequence: number;
+  client_message_id: string;
+  created_at: string;
+};
+
+export type InterviewMessageListResponse = {
+  items: InterviewMessage[];
+};
+
+export type InterviewMessageCreateRequest = {
+  speaker: InterviewMessageSpeaker;
+  content: string;
+  client_message_id: string;
+};

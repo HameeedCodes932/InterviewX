@@ -158,6 +158,10 @@ Both require `Authorization: Bearer <access_token>`. Ownership is always taken f
 | `GET` | `/api/v1/interviews` | List own sessions newest-first (`limit`/`offset`) |
 | `GET` | `/api/v1/interviews/{session_id}` | Fetch own session (404 if missing or not owned) |
 | `POST` | `/api/v1/interviews/{session_id}/complete` | Mark own session completed (idempotent) |
+| `GET` | `/api/v1/interviews/{session_id}/messages` | List conversation messages in order |
+| `POST` | `/api/v1/interviews/{session_id}/messages` | Persist a message (201; idempotent on `client_message_id`) |
+
+Messages require a `client_message_id` (UUID) for safe retries. Writes to completed sessions return **409**. Content max length is **8000** characters after trim.
 
 List pagination: `limit` defaults to `20` (max `50`), `offset` defaults to `0`. Response shape:
 

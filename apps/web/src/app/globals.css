@@ -257,10 +257,25 @@
     }
   }
 
+  /*
+   * Desktop room columns must fill the grid track height so the conversation
+   * transcript (flex-1 + overflow) receives leftover space instead of collapsing
+   * when sibling chrome (composer/controls) is present — including completed
+   * read-only sessions. Avoid a separate max-height that fights the flex chain.
+   */
   @media (min-width: 1024px) {
+    .ix-room-stage,
     .ix-room-chat {
+      height: 100%;
       min-height: 0;
-      max-height: calc(100dvh - 9rem);
+    }
+
+    .ix-room-stage {
+      overflow-y: auto;
+    }
+
+    .ix-room-chat {
+      overflow: hidden;
     }
   }
 }
